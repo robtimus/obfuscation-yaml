@@ -1,0 +1,87 @@
+string: "string\"int"
+int: 123456
+float: 1234.56
+boolean: true
+null: null
+mapping:
+  string: 'string"int'
+  int: 123456
+  float: 1234.56
+  boolean: true
+  null: null
+  nested:
+    - prop1: "1"
+      prop2: "2"
+flowMapping: { string: "string\"int", int: 123456, float: 1234.56, boolean: true, null: null, nested: { prop1: "1", prop2: "2" } }
+sequence:
+  -
+    - "1"
+    - "2"
+  - {}
+flowSequence: [ [ "1", "2" ], {} ]
+notMatchedString: "123456"
+notMatchedInt: 123456
+notMatchedFloat: 1234.56
+notMatchedBoolean: true
+nonMatchedNull: null
+nonMatchedMapping:
+  notMatchedString: "123456"
+  notMatchedInt: 123456
+  notMatchedFloat: 1234.56
+  notMatchedBoolean: true
+  nonMatchedNull: null
+nested:
+  - string: "string\"int"
+    int: 123456
+    float: 1234.56
+    boolean: true
+    null: null
+    mapping:
+      string: "string\"int"
+      int: 123456
+      float: 1234.56
+      boolean: true
+      nested:
+        - prop1: "1"
+          prop2: "2"
+    flowMapping: { string: "string\"int", int: 123456, float: 1234.56, boolean: true, null: null, nested: { prop1: "1", prop2: "2" } }
+    sequence:
+      -
+        - "1"
+        - "2"
+      - {}
+    flowSequence: [ [ "1", "2" ], {} ]
+    notMatchedString: "123456"
+    notMatchedInt: 123456
+    notMatchedFloat: 1234.56
+    notMatchedBoolean: true
+    nonMatchedNull: null
+notObfuscated:
+  string: "string\"int"
+  int: 123456
+  float: 1234.56
+  boolean: true
+  null: null
+  mapping:
+    - string: "string\"int"
+      int: 123456
+      float: 1234.56
+      boolean: true
+      nested:
+        - prop1: "1"
+          prop2: "2"
+          # comment
+  flowMapping: { string: "string\"int", int: 123456, float: 1234.56, boolean: true, null: null, nested: { prop1: "1", prop2: "2" } }
+  sequence:
+    -
+      - "1"
+      - "2"
+    - {}
+  flowSequence: [ [ "1", "2" ], {} ]
+  notMatchedString: "123456"
+  notMatchedInt: 123456
+  notMatchedFloat: 1234.56
+  notMatchedBoolean: true
+  nonMatchedNull: null
+anchor: &A "this is an anchor" # comment
+alias: *A # comment

@@ -1,0 +1,30 @@
+string: "***"
+int: ***
+float: ***
+boolean: ***
+null: ***
+mapping:
+  ***
+flowMapping: ***
+sequence:
+  ***
+flowSequence: ***
+notMatchedString: "123456"
+notMatchedInt: 123456
+notMatchedFloat: 1234.56
+notMatchedBoolean: true
+nonMatchedNull: null
+nonMatchedMapping:
+  notMatchedString: "123456"
+  notMatchedInt: 123456
+  notMatchedFloat: 1234.56
+  notMatchedBoolean: true
+  nonMatchedNull: null
+nested:
+  - string: "***"
+    int: ***
+    float: ***
+    boolean: ***
+    null: ***
+    mapping:
+      <obfuscation aborted due to malformed YAML>
