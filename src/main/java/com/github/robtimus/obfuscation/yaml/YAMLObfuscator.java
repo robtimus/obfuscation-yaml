@@ -134,7 +134,7 @@ public final class YAMLObfuscator extends Obfuscator {
         try {
             while (context.hasNextEvent()) {
                 event = context.nextEvent();
-                if (event.isEvent(Event.ID.Scalar) && context.hasCurrentFieldName()) {
+                if (event.getEventId() == Event.ID.Scalar && context.hasCurrentFieldName()) {
                     String property = context.currentFieldName();
                     Obfuscator obfuscator = obfuscators.get(property);
                     if (obfuscator != null) {
@@ -191,9 +191,9 @@ public final class YAMLObfuscator extends Obfuscator {
         Event endEvent = null;
         while (depth > 0 && context.hasNextEvent()) {
             endEvent = context.nextEvent();
-            if (endEvent.isEvent(beginEventId)) {
+            if (endEvent.getEventId() == beginEventId) {
                 depth++;
-            } else if (endEvent.isEvent(endEventId)) {
+            } else if (endEvent.getEventId() == endEventId) {
                 depth--;
             }
         }
@@ -316,7 +316,10 @@ public final class YAMLObfuscator extends Obfuscator {
             if (anchor.isPresent()) {
                 // skip past the & and anchor name
                 int newStartIndex = eventStartIndex;
-                newStartIndex += 1 + anchor.get().getAnchor().length();
+                // In snakeyaml-engine 2.0, class Anchor has method getAnchor()
+                // In snakeyaml-engine 2.1 that was replaced by method getValue()
+                // To support both, use toString() that returns the anchor/value for both versions
+                newStartIndex += 1 + anchor.get().toString().length();
                 newStartIndex = skipLeadingWhitespace(text, newStartIndex, eventEndIndex);
                 destination.append(text, eventStartIndex, newStartIndex);
                 return newStartIndex;
