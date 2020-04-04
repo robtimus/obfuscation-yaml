@@ -17,14 +17,14 @@
 
 package com.github.robtimus.obfuscation.yaml;
 
-import static com.github.robtimus.obfuscation.CaseSensitivity.CASE_SENSITIVE;
-import static com.github.robtimus.obfuscation.ObfuscatorUtils.checkStartAndEnd;
-import static com.github.robtimus.obfuscation.ObfuscatorUtils.copyTo;
-import static com.github.robtimus.obfuscation.ObfuscatorUtils.discardAll;
-import static com.github.robtimus.obfuscation.ObfuscatorUtils.map;
-import static com.github.robtimus.obfuscation.ObfuscatorUtils.reader;
-import static com.github.robtimus.obfuscation.ObfuscatorUtils.skipLeadingWhitespace;
-import static com.github.robtimus.obfuscation.ObfuscatorUtils.skipTrailingWhitespace;
+import static com.github.robtimus.obfuscation.support.CaseSensitivity.CASE_SENSITIVE;
+import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.checkStartAndEnd;
+import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.copyTo;
+import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.discardAll;
+import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.map;
+import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.reader;
+import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.skipLeadingWhitespace;
+import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.skipTrailingWhitespace;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
@@ -45,10 +45,10 @@ import org.snakeyaml.engine.v2.exceptions.YamlEngineException;
 import org.snakeyaml.engine.v2.parser.Parser;
 import org.snakeyaml.engine.v2.parser.ParserImpl;
 import org.snakeyaml.engine.v2.scanner.StreamReader;
-import com.github.robtimus.obfuscation.CachingObfuscatingWriter;
-import com.github.robtimus.obfuscation.CaseSensitivity;
 import com.github.robtimus.obfuscation.Obfuscator;
-import com.github.robtimus.obfuscation.ObfuscatorUtils.MapBuilder;
+import com.github.robtimus.obfuscation.support.CachingObfuscatingWriter;
+import com.github.robtimus.obfuscation.support.CaseSensitivity;
+import com.github.robtimus.obfuscation.support.ObfuscatorUtils.MapBuilder;
 
 /**
  * An obfuscator that obfuscates YAML properties in {@link CharSequence CharSequences} or the contents of {@link Reader Readers}.
