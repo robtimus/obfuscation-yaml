@@ -1,6 +1,6 @@
 # obfuscation-yaml
 
-Provides functionality for obfuscating YAML documents. This can be useful for logging such documents.
+Provides functionality for obfuscating YAML documents. This can be useful for logging such documents, where sensitive content should not be logged as-is.
 
 To create a YAML obfuscator, simply create a builder, add properties to it, and let it build the final obfuscator:
 
