@@ -8,11 +8,15 @@ To create a YAML obfuscator, simply create a builder, add properties to it, and 
             .withProperty("password", Obfuscator.fixedLength(3))
             .build();
 
-By default this will obfuscate all properties; for object and array properties, their contents in the document including opening and closing characters will be obfuscated. This can be turned off by specifying that only scalars should be obfuscated:
+## Disabling obfuscation for mappings and/or sequences
 
-    Obfuscator obfuscator = YAMLObfuscator.builder()
+By default, a JSON obfuscator will obfuscate all properties; for mapping and sequence properties, their contents in the document including opening and closing characters will be obfuscated. This can be turned and or off for all properties, or per property. For example:
+
+    Obfuscator obfuscator = JSONObfuscator.builder()
+            .scalarsOnlyByDefault()
             .withProperty("password", Obfuscator.fixedLength(3))
-            .withObfuscationMode(ObfuscationMode.SCALAR)
+            .withProperty("complex", Obfuscator.fixedLength(3))
+                    .includeMappings() // override the default setting
             .build();
 
 ## Handling malformed YAML

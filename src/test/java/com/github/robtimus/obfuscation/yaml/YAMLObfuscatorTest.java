@@ -19,6 +19,7 @@ package com.github.robtimus.obfuscation.yaml;
 
 import static com.github.robtimus.obfuscation.Obfuscator.fixedLength;
 import static com.github.robtimus.obfuscation.Obfuscator.none;
+import static com.github.robtimus.obfuscation.support.CaseSensitivity.CASE_SENSITIVE;
 import static com.github.robtimus.obfuscation.yaml.YAMLObfuscator.builder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -42,7 +43,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import com.github.robtimus.obfuscation.Obfuscator;
 import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.Builder;
-import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.ObfuscationMode;
 
 @SuppressWarnings({ "javadoc", "nls" })
 @TestInstance(Lifecycle.PER_CLASS)
@@ -56,14 +56,17 @@ public class YAMLObfuscatorTest {
     }
 
     Arguments[] testEquals() {
-        Obfuscator obfuscator = createObfuscator();
+        Obfuscator obfuscator = createObfuscator(builder().withProperty("test", none()));
         return new Arguments[] {
                 arguments(obfuscator, obfuscator, true),
                 arguments(obfuscator, null, false),
-                arguments(obfuscator, createObfuscator(), true),
+                arguments(obfuscator, createObfuscator(builder().withProperty("test", none())), true),
+                arguments(obfuscator, createObfuscator(builder().withProperty("test", none(), CASE_SENSITIVE)), true),
+                arguments(obfuscator, createObfuscator(builder().withProperty("test", fixedLength(3))), false),
+                arguments(obfuscator, createObfuscator(builder().withProperty("test", none()).excludeMappings()), false),
+                arguments(obfuscator, createObfuscator(builder().withProperty("test", none()).excludeSequences()), false),
                 arguments(obfuscator, builder().build(), false),
-                arguments(obfuscator, createObfuscator(builder().withObfuscationMode(ObfuscationMode.SCALAR)), false),
-                arguments(obfuscator, createObfuscator(builder().withMalformedYAMLWarning(null)), false),
+                arguments(obfuscator, createObfuscator(builder().withProperty("test", none()).withMalformedYAMLWarning(null)), false),
                 arguments(obfuscator, "foo", false),
         };
     }
@@ -82,7 +85,29 @@ public class YAMLObfuscatorTest {
     public class ValidYAML {
 
         @Nested
-        @DisplayName("ObfuscationMode.ALL")
+        @DisplayName("caseSensitiveByDefault()")
+        @TestInstance(Lifecycle.PER_CLASS)
+        public class ObfuscatingCaseSensitively extends ObfuscatorTest {
+
+            public ObfuscatingCaseSensitively() {
+                super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.all",
+                        () -> createObfuscator(builder().caseSensitiveByDefault()));
+            }
+        }
+
+        @Nested
+        @DisplayName("caseInsensitiveByDefault()")
+        @TestInstance(Lifecycle.PER_CLASS)
+        public class ObfuscatingCaseInsensitively extends ObfuscatorTest {
+
+            public ObfuscatingCaseInsensitively() {
+                super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.all",
+                        () -> createObfuscatorCaseInsensitive(builder().caseInsensitiveByDefault()));
+            }
+        }
+
+        @Nested
+        @DisplayName("obfuscating all (default)")
         @TestInstance(Lifecycle.PER_CLASS)
         public class ObfuscatingAll extends ObfuscatorTest {
 
@@ -92,13 +117,35 @@ public class YAMLObfuscatorTest {
         }
 
         @Nested
-        @DisplayName("ObfuscationMode.SCALAR")
+        @DisplayName("obfuscating all, overriding scalars only by default")
+        @TestInstance(Lifecycle.PER_CLASS)
+        public class ObfuscatingAllOverridden extends ObfuscatorTest {
+
+            public ObfuscatingAllOverridden() {
+                super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.all",
+                        () -> createObfuscatorObfuscatingAll(builder().scalarsOnlyByDefault()));
+            }
+        }
+
+        @Nested
+        @DisplayName("obfuscating scalars only by default")
         @TestInstance(Lifecycle.PER_CLASS)
         public class ObfuscatingScalars extends ObfuscatorTest {
 
             public ObfuscatingScalars() {
                 super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.scalar",
-                        () -> createObfuscator(builder().withObfuscationMode(ObfuscationMode.SCALAR)));
+                        () -> createObfuscator(builder().scalarsOnlyByDefault()));
+            }
+        }
+
+        @Nested
+        @DisplayName("obfuscating scalars only, overriding all by default")
+        @TestInstance(Lifecycle.PER_CLASS)
+        public class ObfuscatingScalarsOverridden extends ObfuscatorTest {
+
+            public ObfuscatingScalarsOverridden() {
+                super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.scalar",
+                        () -> createObfuscatorObfuscatingScalarsOnly(builder().allByDefault()));
             }
         }
     }
@@ -234,6 +281,60 @@ public class YAMLObfuscatorTest {
                 .withProperty("anchor", obfuscator)
                 .withProperty("alias", obfuscator)
                 .withProperty("notObfuscated", none())
+                .build();
+    }
+
+    private static Obfuscator createObfuscatorCaseInsensitive(Builder builder) {
+        Obfuscator obfuscator = fixedLength(3);
+        return builder
+                .withProperty("STRING", obfuscator)
+                .withProperty("INT", obfuscator)
+                .withProperty("FLOAT", obfuscator)
+                .withProperty("BOOLEAN", obfuscator)
+                .withProperty("MAPPING", obfuscator)
+                .withProperty("FLOWMAPPING", obfuscator)
+                .withProperty("SEQUENCE", obfuscator)
+                .withProperty("FLOWSEQUENCE", obfuscator)
+                .withProperty("NULL", obfuscator)
+                .withProperty("ANCHOR", obfuscator)
+                .withProperty("ALIAS", obfuscator)
+                .withProperty("NOTOBFUSCATED", none())
+                .build();
+    }
+
+    private static Obfuscator createObfuscatorObfuscatingAll(Builder builder) {
+        Obfuscator obfuscator = fixedLength(3);
+        return builder
+                .withProperty("string", obfuscator).all()
+                .withProperty("int", obfuscator).all()
+                .withProperty("float", obfuscator).all()
+                .withProperty("boolean", obfuscator).all()
+                .withProperty("mapping", obfuscator).all()
+                .withProperty("flowMapping", obfuscator).all()
+                .withProperty("sequence", obfuscator).all()
+                .withProperty("flowSequence", obfuscator).all()
+                .withProperty("null", obfuscator).all()
+                .withProperty("anchor", obfuscator).all()
+                .withProperty("alias", obfuscator).all()
+                .withProperty("notObfuscated", none()).all()
+                .build();
+    }
+
+    private static Obfuscator createObfuscatorObfuscatingScalarsOnly(Builder builder) {
+        Obfuscator obfuscator = fixedLength(3);
+        return builder
+                .withProperty("string", obfuscator).scalarsOnly()
+                .withProperty("int", obfuscator).scalarsOnly()
+                .withProperty("float", obfuscator).scalarsOnly()
+                .withProperty("boolean", obfuscator).scalarsOnly()
+                .withProperty("mapping", obfuscator).scalarsOnly()
+                .withProperty("flowMapping", obfuscator).scalarsOnly()
+                .withProperty("sequence", obfuscator).scalarsOnly()
+                .withProperty("flowSequence", obfuscator).scalarsOnly()
+                .withProperty("null", obfuscator).scalarsOnly()
+                .withProperty("anchor", obfuscator).scalarsOnly()
+                .withProperty("alias", obfuscator).scalarsOnly()
+                .withProperty("notObfuscated", none()).scalarsOnly()
                 .build();
     }
 

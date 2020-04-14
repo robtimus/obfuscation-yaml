@@ -17,11 +17,9 @@
 
 package com.github.robtimus.obfuscation.yaml;
 
-import static com.github.robtimus.obfuscation.support.CaseSensitivity.CASE_SENSITIVE;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.checkStartAndEnd;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.copyTo;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.discardAll;
-import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.map;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.reader;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.skipLeadingWhitespace;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.skipTrailingWhitespace;
@@ -48,7 +46,7 @@ import org.snakeyaml.engine.v2.scanner.StreamReader;
 import com.github.robtimus.obfuscation.Obfuscator;
 import com.github.robtimus.obfuscation.support.CachingObfuscatingWriter;
 import com.github.robtimus.obfuscation.support.CaseSensitivity;
-import com.github.robtimus.obfuscation.support.ObfuscatorUtils.MapBuilder;
+import com.github.robtimus.obfuscation.support.MapBuilder;
 
 /**
  * An obfuscator that obfuscates YAML properties in {@link CharSequence CharSequences} or the contents of {@link Reader Readers}.
@@ -59,38 +57,14 @@ public final class YAMLObfuscator extends Obfuscator {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(YAMLObfuscator.class);
 
-    /**
-     * The possible obfuscation modes.
-     *
-     * @author Rob Spoor
-     */
-    public enum ObfuscationMode {
-        /** Indicates only scalar properties (strings, numbers, booleans, nulls) will be obfuscated, not sequences or mappings. */
-        SCALAR(false, false),
-
-        /** Indicates all properties will be obfuscated, including sequences and mappings. */
-        ALL(true, true),
-        ;
-
-        private final boolean obfuscateSequences;
-        private final boolean obfuscateMappings;
-
-        ObfuscationMode(boolean obfuscateSequences, boolean obfuscateMappings) {
-            this.obfuscateSequences = obfuscateSequences;
-            this.obfuscateMappings = obfuscateMappings;
-        }
-    }
-
-    private final Map<String, Obfuscator> obfuscators;
-    private final ObfuscationMode obfuscationMode;
+    private final Map<String, PropertyConfig> properties;
 
     private final LoadSettings settings;
 
     private final String malformedYAMLWarning;
 
-    private YAMLObfuscator(Builder builder) {
-        obfuscators = builder.obfuscators();
-        obfuscationMode = builder.obfuscationMode;
+    private YAMLObfuscator(ObfuscatorBuilder builder) {
+        properties = builder.properties();
 
         settings = LoadSettings.builder()
                 // be as lenient as possible
@@ -136,9 +110,9 @@ public final class YAMLObfuscator extends Obfuscator {
                 event = context.nextEvent();
                 if (event.getEventId() == Event.ID.Scalar && context.hasCurrentFieldName()) {
                     String property = context.currentFieldName();
-                    Obfuscator obfuscator = obfuscators.get(property);
-                    if (obfuscator != null) {
-                        obfuscateProperty(obfuscator, context);
+                    PropertyConfig propertyConfig = properties.get(property);
+                    if (propertyConfig != null) {
+                        obfuscateProperty(propertyConfig, context);
                     }
                 }
             }
@@ -153,30 +127,30 @@ public final class YAMLObfuscator extends Obfuscator {
         }
     }
 
-    private void obfuscateProperty(Obfuscator obfuscator, Context context) throws IOException {
+    private void obfuscateProperty(PropertyConfig propertyConfig, Context context) throws IOException {
         Event event = context.nextEvent();
         switch (event.getEventId()) {
         case SequenceStart:
-            if (!obfuscationMode.obfuscateSequences) {
+            if (!propertyConfig.obfuscateSequences) {
                 // there is an obfuscator for the sequence property, but the obfuscation mode prohibits obfuscating sequences;
                 // abort and continue with the next property
                 return;
             }
             context.appendUntilEvent(event);
-            obfuscateNested(obfuscator, context, event, Event.ID.SequenceStart, Event.ID.SequenceEnd);
+            obfuscateNested(propertyConfig.obfuscator, context, event, Event.ID.SequenceStart, Event.ID.SequenceEnd);
             break;
         case MappingStart:
-            if (!obfuscationMode.obfuscateMappings) {
+            if (!propertyConfig.obfuscateMappings) {
                 // there is an obfuscator for the mapping property, but the obfuscation mode prohibits obfuscating mappings;
                 // abort and continue with the next property
                 return;
             }
             context.appendUntilEvent(event);
-            obfuscateNested(obfuscator, context, event, Event.ID.MappingStart, Event.ID.MappingEnd);
+            obfuscateNested(propertyConfig.obfuscator, context, event, Event.ID.MappingStart, Event.ID.MappingEnd);
             break;
         case Scalar:
             context.appendUntilEvent(event);
-            obfuscateScalar(obfuscator, context, event);
+            obfuscateScalar(propertyConfig.obfuscator, context, event);
             break;
         default:
             // do nothing
@@ -254,7 +228,7 @@ public final class YAMLObfuscator extends Obfuscator {
                 break;
             case Scalar:
                 if (structureStack.peekLast() == Event.ID.MappingStart && currentFieldName == null) {
-                    // directly inside an array, and there is no current field name, so this must be it
+                    // directly inside a sequence, and there is no current field name, so this must be it
                     currentFieldName = ((ScalarEvent) event).getValue();
                 } else {
                     currentFieldName = null;
@@ -356,22 +330,20 @@ public final class YAMLObfuscator extends Obfuscator {
             return false;
         }
         YAMLObfuscator other = (YAMLObfuscator) o;
-        return obfuscators.equals(other.obfuscators)
-                && obfuscationMode == other.obfuscationMode
+        return properties.equals(other.properties)
                 && Objects.equals(malformedYAMLWarning, other.malformedYAMLWarning);
     }
 
     @Override
     public int hashCode() {
-        return obfuscators.hashCode() ^ obfuscationMode.hashCode() ^ Objects.hashCode(malformedYAMLWarning);
+        return properties.hashCode() ^ Objects.hashCode(malformedYAMLWarning);
     }
 
     @Override
     @SuppressWarnings("nls")
     public String toString() {
         return getClass().getName()
-                + "[obfuscators=" + obfuscators
-                + ",obfuscationMode=" + obfuscationMode
+                + "[properties=" + properties
                 + ",malformedYAMLWarning=" + malformedYAMLWarning
                 + "]";
     }
@@ -382,7 +354,7 @@ public final class YAMLObfuscator extends Obfuscator {
      * @return A builder that will create {@code YAMLObfuscators}.
      */
     public static Builder builder() {
-        return new Builder();
+        return new ObfuscatorBuilder();
     }
 
     /**
@@ -390,60 +362,116 @@ public final class YAMLObfuscator extends Obfuscator {
      *
      * @author Rob Spoor
      */
-    public static final class Builder {
-
-        private final MapBuilder<Obfuscator> obfuscators;
-
-        private ObfuscationMode obfuscationMode;
-
-        private String malformedYAMLWarning;
-
-        private Builder() {
-            obfuscators = map();
-            obfuscationMode = ObfuscationMode.ALL;
-            malformedYAMLWarning = Messages.YAMLObfuscator.malformedYAML.text.get();
-        }
+    public abstract static class Builder {
 
         /**
          * Adds a property to obfuscate.
-         * This method is an alias for {@link #withProperty(String, Obfuscator, CaseSensitivity) withProperty(property, obfuscator, CASE_SENSITIVE)}.
+         * This method is an alias for {@link #withProperty(String, Obfuscator, CaseSensitivity)} with the last specified default case sensitivity
+         * using {@link #caseSensitiveByDefault()} or {@link #caseInsensitiveByDefault()}. The default is {@link CaseSensitivity#CASE_SENSITIVE}.
          *
-         * @param property The name of the property. It will be treated case sensitively.
+         * @param property The name of the property.
          * @param obfuscator The obfuscator to use for obfuscating the property.
-         * @return This object.
+         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
          * @throws NullPointerException If the given property name or obfuscator is {@code null}.
          * @throws IllegalArgumentException If a property with the same name and the same case sensitivity was already added.
          */
-        public Builder withProperty(String property, Obfuscator obfuscator) {
-            return withProperty(property, obfuscator, CASE_SENSITIVE);
-        }
+        public abstract PropertyConfigurer withProperty(String property, Obfuscator obfuscator);
 
         /**
          * Adds a property to obfuscate.
          *
          * @param property The name of the property.
          * @param obfuscator The obfuscator to use for obfuscating the property.
-         * @param caseSensitivity The case sensitivity for the key.
-         * @return This object.
+         * @param caseSensitivity The case sensitivity for the property.
+         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
          * @throws NullPointerException If the given property name, obfuscator or case sensitivity is {@code null}.
          * @throws IllegalArgumentException If a property with the same name and the same case sensitivity was already added.
          */
-        public Builder withProperty(String property, Obfuscator obfuscator, CaseSensitivity caseSensitivity) {
-            obfuscators.withEntry(property, obfuscator, caseSensitivity);
-            return this;
+        public abstract PropertyConfigurer withProperty(String property, Obfuscator obfuscator, CaseSensitivity caseSensitivity);
+
+        /**
+         * Sets the default case sensitivity for new properties to {@link CaseSensitivity#CASE_SENSITIVE}. This is the default setting.
+         * <p>
+         * Note that this will not change the case sensitivity of any property that was already added.
+         *
+         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         */
+        public abstract PropertyConfigurer caseSensitiveByDefault();
+
+        /**
+         * Sets the default case sensitivity for new entries to {@link CaseSensitivity#CASE_INSENSITIVE}.
+         * <p>
+         * Note that this will not change the case sensitivity of any entry that was already added.
+         *
+         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         */
+        public abstract PropertyConfigurer caseInsensitiveByDefault();
+
+        /**
+         * Indicates that by default properties will not be obfuscated if they are YAML mappings or sequences.
+         * This method is shorthand for calling both {@link #excludeMappingsByDefault()} and {@link #excludeSequencesByDefault()}.
+         * <p>
+         * Note that this will not what will be obfuscated for any property that was already added.
+         *
+         * @return This object.
+         */
+        public Builder scalarsOnlyByDefault() {
+            return excludeMappingsByDefault()
+                    .excludeSequencesByDefault();
         }
 
         /**
-         * Sets the obfuscation mode. The default is {@link ObfuscationMode#ALL}.
+         * Indicates that by default properties will not be obfuscated if they are YAML mappings.
+         * This can be overridden per property using {@link PropertyConfigurer#excludeMappings()}
+         * <p>
+         * Note that this will not what will be obfuscated for any property that was already added.
          *
-         * @param obfuscationMode The obfuscation mode.
          * @return This object.
-         * @throws NullPointerException If the given obfuscation mode is {@code null}.
          */
-        public Builder withObfuscationMode(ObfuscationMode obfuscationMode) {
-            this.obfuscationMode = Objects.requireNonNull(obfuscationMode);
-            return this;
+        public abstract Builder excludeMappingsByDefault();
+
+        /**
+         * Indicates that by default properties will not be obfuscated if they are YAML sequences.
+         * This can be overridden per property using {@link PropertyConfigurer#excludeSequences()}
+         * <p>
+         * Note that this will not what will be obfuscated for any property that was already added.
+         *
+         * @return This object.
+         */
+        public abstract Builder excludeSequencesByDefault();
+
+        /**
+         * Indicates that by default properties will be obfuscated if they are YAML mappings or sequences.
+         * This method is shorthand for calling both {@link #includeMappingsByDefault()} and {@link #includeSequencesByDefault()}.
+         * <p>
+         * Note that this will not what will be obfuscated for any property that was already added.
+         *
+         * @return This object.
+         */
+        public Builder allByDefault() {
+            return includeMappingsByDefault()
+                    .includeSequencesByDefault();
         }
+
+        /**
+         * Indicates that by default properties will be obfuscated if they are YAML mappings.
+         * This can be overridden per property using {@link PropertyConfigurer#excludeMappings()}
+         * <p>
+         * Note that this will not what will be obfuscated for any property that was already added.
+         *
+         * @return This object.
+         */
+        public abstract Builder includeMappingsByDefault();
+
+        /**
+         * Indicates that by default properties will be obfuscated if they are YAML sequences.
+         * This can be overridden per property using {@link PropertyConfigurer#excludeSequences()}
+         * <p>
+         * Note that this will not what will be obfuscated for any property that was already added.
+         *
+         * @return This object.
+         */
+        public abstract Builder includeSequencesByDefault();
 
         /**
          * Sets the warning to include if a {@link YamlEngineException} is thrown.
@@ -452,10 +480,7 @@ public final class YAMLObfuscator extends Obfuscator {
          * @param warning The warning to include.
          * @return This object.
          */
-        public Builder withMalformedYAMLWarning(String warning) {
-            malformedYAMLWarning = warning;
-            return this;
-        }
+        public abstract Builder withMalformedYAMLWarning(String warning);
 
         /**
          * This method allows the application of a function to this builder.
@@ -470,17 +495,255 @@ public final class YAMLObfuscator extends Obfuscator {
             return f.apply(this);
         }
 
-        private Map<String, Obfuscator> obfuscators() {
-            return obfuscators.build();
-        }
-
         /**
          * Creates a new {@code YAMLObfuscator} with the properties and obfuscators added to this builder.
          *
          * @return The created {@code YAMLObfuscator}.
          */
+        public abstract YAMLObfuscator build();
+    }
+
+    /**
+     * An object that can be used to configure a property that should be obfuscated.
+     *
+     * @author Rob Spoor
+     */
+    public abstract static class PropertyConfigurer extends Builder {
+
+        /**
+         * Indicates that properties with the current name will not be obfuscated if they are YAML mappings or sequences.
+         * This method is shorthand for calling both {@link #excludeMappings()} and {@link #excludeSequences()}.
+         *
+         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         */
+        public PropertyConfigurer scalarsOnly() {
+            return excludeMappings()
+                    .excludeSequences();
+        }
+
+        /**
+         * Indicates that properties with the current name will not be obfuscated if they are YAML mappings.
+         *
+         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         */
+        public abstract PropertyConfigurer excludeMappings();
+
+        /**
+         * Indicates that properties with the current name will not be obfuscated if they are YAML sequences.
+         *
+         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         */
+        public abstract PropertyConfigurer excludeSequences();
+
+        /**
+         * Indicates that properties with the current name will be obfuscated if they are YAML mappings or sequences.
+         * This method is shorthand for calling both {@link #includeMappings()} and {@link #includeSequences()}.
+         *
+         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         */
+        public PropertyConfigurer all() {
+            return includeMappings()
+                    .includeSequences();
+        }
+
+        /**
+         * Indicates that properties with the current name will be obfuscated if they are YAML mappings.
+         *
+         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         */
+        public abstract PropertyConfigurer includeMappings();
+
+        /**
+         * Indicates that properties with the current name will be obfuscated if they are YAML sequences.
+         *
+         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         */
+        public abstract PropertyConfigurer includeSequences();
+    }
+
+    private static final class ObfuscatorBuilder extends PropertyConfigurer {
+
+        private final MapBuilder<PropertyConfig> properties;
+
+        private String malformedYAMLWarning;
+
+        // default settings
+        private boolean obfuscateMappingsByDefault;
+        private boolean obfuscateSequencesByDefault;
+
+        // per property settings
+        private String property;
+        private Obfuscator obfuscator;
+        private CaseSensitivity caseSensitivity;
+        private boolean obfuscateMappings;
+        private boolean obfuscateSequences;
+
+        private ObfuscatorBuilder() {
+            properties = new MapBuilder<>();
+            malformedYAMLWarning = Messages.YAMLObfuscator.malformedYAML.text.get();
+
+            obfuscateMappingsByDefault = true;
+            obfuscateSequencesByDefault = true;
+        }
+
+        @Override
+        public PropertyConfigurer withProperty(String property, Obfuscator obfuscator) {
+            addLastProperty();
+
+            properties.testEntry(property);
+
+            this.property = property;
+            this.obfuscator = obfuscator;
+            this.caseSensitivity = null;
+            this.obfuscateMappings = obfuscateMappingsByDefault;
+            this.obfuscateSequences = obfuscateSequencesByDefault;
+
+            return this;
+        }
+
+        @Override
+        public PropertyConfigurer withProperty(String property, Obfuscator obfuscator, CaseSensitivity caseSensitivity) {
+            addLastProperty();
+
+            properties.testEntry(property, caseSensitivity);
+
+            this.property = property;
+            this.obfuscator = obfuscator;
+            this.caseSensitivity = caseSensitivity;
+            this.obfuscateMappings = obfuscateMappingsByDefault;
+            this.obfuscateSequences = obfuscateSequencesByDefault;
+
+            return this;
+        }
+
+        @Override
+        public PropertyConfigurer caseSensitiveByDefault() {
+            properties.caseSensitiveByDefault();
+            return this;
+        }
+
+        @Override
+        public PropertyConfigurer caseInsensitiveByDefault() {
+            properties.caseInsensitiveByDefault();
+            return this;
+        }
+
+        @Override
+        public Builder excludeMappingsByDefault() {
+            obfuscateMappingsByDefault = false;
+            return this;
+        }
+
+        @Override
+        public Builder excludeSequencesByDefault() {
+            obfuscateSequencesByDefault = false;
+            return this;
+        }
+
+        @Override
+        public Builder includeMappingsByDefault() {
+            obfuscateMappingsByDefault = true;
+            return this;
+        }
+
+        @Override
+        public Builder includeSequencesByDefault() {
+            obfuscateSequencesByDefault = true;
+            return this;
+        }
+
+        @Override
+        public PropertyConfigurer excludeMappings() {
+            obfuscateMappings = false;
+            return this;
+        }
+
+        @Override
+        public PropertyConfigurer excludeSequences() {
+            obfuscateSequences = false;
+            return this;
+        }
+
+        @Override
+        public PropertyConfigurer includeMappings() {
+            obfuscateMappings = true;
+            return this;
+        }
+
+        @Override
+        public PropertyConfigurer includeSequences() {
+            obfuscateSequences = true;
+            return this;
+        }
+
+        @Override
+        public Builder withMalformedYAMLWarning(String warning) {
+            malformedYAMLWarning = warning;
+            return this;
+        }
+
+        private Map<String, PropertyConfig> properties() {
+            return properties.build();
+        }
+
+        private void addLastProperty() {
+            if (property != null) {
+                PropertyConfig propertyConfig = new PropertyConfig(obfuscator, obfuscateMappings, obfuscateSequences);
+                if (caseSensitivity != null) {
+                    properties.withEntry(property, propertyConfig, caseSensitivity);
+                } else {
+                    properties.withEntry(property, propertyConfig);
+                }
+            }
+
+            property = null;
+            obfuscator = null;
+            caseSensitivity = null;
+            obfuscateMappings = obfuscateMappingsByDefault;
+            obfuscateSequences = obfuscateSequencesByDefault;
+        }
+
+        @Override
         public YAMLObfuscator build() {
+            addLastProperty();
+
             return new YAMLObfuscator(this);
+        }
+    }
+
+    private static final class PropertyConfig {
+
+        private final Obfuscator obfuscator;
+        private final boolean obfuscateMappings;
+        private final boolean obfuscateSequences;
+
+        private PropertyConfig(Obfuscator obfuscator, boolean obfuscateMappings, boolean obfuscateSequences) {
+            this.obfuscator = Objects.requireNonNull(obfuscator);
+            this.obfuscateMappings = obfuscateMappings;
+            this.obfuscateSequences = obfuscateSequences;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            // null and different types should not occur
+            PropertyConfig other = (PropertyConfig) o;
+            return obfuscator.equals(other.obfuscator)
+                    && obfuscateMappings == other.obfuscateMappings
+                    && obfuscateSequences == other.obfuscateSequences;
+        }
+
+        @Override
+        public int hashCode() {
+            return obfuscator.hashCode() ^ Boolean.hashCode(obfuscateMappings) ^ Boolean.hashCode(obfuscateSequences);
+        }
+
+        @Override
+        @SuppressWarnings("nls")
+        public String toString() {
+            return "[obfuscator=" + obfuscator
+                    + ",obfuscateMappings=" + obfuscateMappings
+                    + ",obfuscateSequences=" + obfuscateSequences
+                    + "]";
         }
     }
 }
