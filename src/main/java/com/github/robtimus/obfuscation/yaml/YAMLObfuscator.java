@@ -364,6 +364,10 @@ public final class YAMLObfuscator extends Obfuscator {
      */
     public abstract static class Builder {
 
+        private Builder() {
+            super();
+        }
+
         /**
          * Adds a property to obfuscate.
          * This method is an alias for {@link #withProperty(String, Obfuscator, CaseSensitivity)} with the last specified default case sensitivity
@@ -509,6 +513,10 @@ public final class YAMLObfuscator extends Obfuscator {
      * @author Rob Spoor
      */
     public abstract static class PropertyConfigurer extends Builder {
+
+        private PropertyConfigurer() {
+            super();
+        }
 
         /**
          * Indicates that properties with the current name will not be obfuscated if they are YAML mappings or sequences.
