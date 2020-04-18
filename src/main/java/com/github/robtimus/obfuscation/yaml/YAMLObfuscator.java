@@ -394,24 +394,24 @@ public final class YAMLObfuscator extends Obfuscator {
          * <p>
          * Note that this will not change the case sensitivity of any property that was already added.
          *
-         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         * @return This object.
          */
-        public abstract PropertyConfigurer caseSensitiveByDefault();
+        public abstract Builder caseSensitiveByDefault();
 
         /**
          * Sets the default case sensitivity for new entries to {@link CaseSensitivity#CASE_INSENSITIVE}.
          * <p>
          * Note that this will not change the case sensitivity of any entry that was already added.
          *
-         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         * @return This object.
          */
-        public abstract PropertyConfigurer caseInsensitiveByDefault();
+        public abstract Builder caseInsensitiveByDefault();
 
         /**
          * Indicates that by default properties will not be obfuscated if they are YAML mappings or sequences.
          * This method is shorthand for calling both {@link #excludeMappingsByDefault()} and {@link #excludeSequencesByDefault()}.
          * <p>
-         * Note that this will not what will be obfuscated for any property that was already added.
+         * Note that this will not change what will be obfuscated for any property that was already added.
          *
          * @return This object.
          */
@@ -424,7 +424,7 @@ public final class YAMLObfuscator extends Obfuscator {
          * Indicates that by default properties will not be obfuscated if they are YAML mappings.
          * This can be overridden per property using {@link PropertyConfigurer#excludeMappings()}
          * <p>
-         * Note that this will not what will be obfuscated for any property that was already added.
+         * Note that this will not change what will be obfuscated for any property that was already added.
          *
          * @return This object.
          */
@@ -434,17 +434,17 @@ public final class YAMLObfuscator extends Obfuscator {
          * Indicates that by default properties will not be obfuscated if they are YAML sequences.
          * This can be overridden per property using {@link PropertyConfigurer#excludeSequences()}
          * <p>
-         * Note that this will not what will be obfuscated for any property that was already added.
+         * Note that this will not change what will be obfuscated for any property that was already added.
          *
          * @return This object.
          */
         public abstract Builder excludeSequencesByDefault();
 
         /**
-         * Indicates that by default properties will be obfuscated if they are YAML mappings or sequences.
+         * Indicates that by default properties will be obfuscated if they are YAML mappings or sequences (default).
          * This method is shorthand for calling both {@link #includeMappingsByDefault()} and {@link #includeSequencesByDefault()}.
          * <p>
-         * Note that this will not what will be obfuscated for any property that was already added.
+         * Note that this will not change what will be obfuscated for any property that was already added.
          *
          * @return This object.
          */
@@ -454,20 +454,20 @@ public final class YAMLObfuscator extends Obfuscator {
         }
 
         /**
-         * Indicates that by default properties will be obfuscated if they are YAML mappings.
+         * Indicates that by default properties will be obfuscated if they are YAML mappings (default).
          * This can be overridden per property using {@link PropertyConfigurer#excludeMappings()}
          * <p>
-         * Note that this will not what will be obfuscated for any property that was already added.
+         * Note that this will not change what will be obfuscated for any property that was already added.
          *
          * @return This object.
          */
         public abstract Builder includeMappingsByDefault();
 
         /**
-         * Indicates that by default properties will be obfuscated if they are YAML sequences.
+         * Indicates that by default properties will be obfuscated if they are YAML sequences (default).
          * This can be overridden per property using {@link PropertyConfigurer#excludeSequences()}
          * <p>
-         * Note that this will not what will be obfuscated for any property that was already added.
+         * Note that this will not change what will be obfuscated for any property that was already added.
          *
          * @return This object.
          */
