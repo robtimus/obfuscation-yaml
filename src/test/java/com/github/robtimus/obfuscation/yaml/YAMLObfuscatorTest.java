@@ -44,14 +44,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 import com.github.robtimus.obfuscation.Obfuscator;
 import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.Builder;
 
-@SuppressWarnings({ "javadoc", "nls" })
+@SuppressWarnings("nls")
 @TestInstance(Lifecycle.PER_CLASS)
-public class YAMLObfuscatorTest {
+class YAMLObfuscatorTest {
 
     @ParameterizedTest(name = "{1}")
     @MethodSource
     @DisplayName("equals(Object)")
-    public void testEquals(Obfuscator obfuscator, Object object, boolean expected) {
+    void testEquals(Obfuscator obfuscator, Object object, boolean expected) {
         assertEquals(expected, obfuscator.equals(object));
     }
 
@@ -73,7 +73,7 @@ public class YAMLObfuscatorTest {
 
     @Test
     @DisplayName("hashCode()")
-    public void testHashCode() {
+    void testHashCode() {
         Obfuscator obfuscator = createObfuscator();
         assertEquals(obfuscator.hashCode(), obfuscator.hashCode());
         assertEquals(obfuscator.hashCode(), createObfuscator().hashCode());
@@ -82,14 +82,14 @@ public class YAMLObfuscatorTest {
     @Nested
     @DisplayName("valid YAML")
     @TestInstance(Lifecycle.PER_CLASS)
-    public class ValidYAML {
+    class ValidYAML {
 
         @Nested
         @DisplayName("caseSensitiveByDefault()")
         @TestInstance(Lifecycle.PER_CLASS)
-        public class ObfuscatingCaseSensitively extends ObfuscatorTest {
+        class ObfuscatingCaseSensitively extends ObfuscatorTest {
 
-            public ObfuscatingCaseSensitively() {
+            ObfuscatingCaseSensitively() {
                 super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.all",
                         () -> createObfuscator(builder().caseSensitiveByDefault()));
             }
@@ -98,9 +98,9 @@ public class YAMLObfuscatorTest {
         @Nested
         @DisplayName("caseInsensitiveByDefault()")
         @TestInstance(Lifecycle.PER_CLASS)
-        public class ObfuscatingCaseInsensitively extends ObfuscatorTest {
+        class ObfuscatingCaseInsensitively extends ObfuscatorTest {
 
-            public ObfuscatingCaseInsensitively() {
+            ObfuscatingCaseInsensitively() {
                 super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.all",
                         () -> createObfuscatorCaseInsensitive(builder().caseInsensitiveByDefault()));
             }
@@ -109,9 +109,9 @@ public class YAMLObfuscatorTest {
         @Nested
         @DisplayName("obfuscating all (default)")
         @TestInstance(Lifecycle.PER_CLASS)
-        public class ObfuscatingAll extends ObfuscatorTest {
+        class ObfuscatingAll extends ObfuscatorTest {
 
-            public ObfuscatingAll() {
+            ObfuscatingAll() {
                 super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.all", () -> createObfuscator());
             }
         }
@@ -119,9 +119,9 @@ public class YAMLObfuscatorTest {
         @Nested
         @DisplayName("obfuscating all, overriding scalars only by default")
         @TestInstance(Lifecycle.PER_CLASS)
-        public class ObfuscatingAllOverridden extends ObfuscatorTest {
+        class ObfuscatingAllOverridden extends ObfuscatorTest {
 
-            public ObfuscatingAllOverridden() {
+            ObfuscatingAllOverridden() {
                 super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.all",
                         () -> createObfuscatorObfuscatingAll(builder().scalarsOnlyByDefault()));
             }
@@ -130,9 +130,9 @@ public class YAMLObfuscatorTest {
         @Nested
         @DisplayName("obfuscating scalars only by default")
         @TestInstance(Lifecycle.PER_CLASS)
-        public class ObfuscatingScalars extends ObfuscatorTest {
+        class ObfuscatingScalars extends ObfuscatorTest {
 
-            public ObfuscatingScalars() {
+            ObfuscatingScalars() {
                 super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.scalar",
                         () -> createObfuscator(builder().scalarsOnlyByDefault()));
             }
@@ -141,9 +141,9 @@ public class YAMLObfuscatorTest {
         @Nested
         @DisplayName("obfuscating scalars only, overriding all by default")
         @TestInstance(Lifecycle.PER_CLASS)
-        public class ObfuscatingScalarsOverridden extends ObfuscatorTest {
+        class ObfuscatingScalarsOverridden extends ObfuscatorTest {
 
-            public ObfuscatingScalarsOverridden() {
+            ObfuscatingScalarsOverridden() {
                 super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.scalar",
                         () -> createObfuscatorObfuscatingScalarsOnly(builder().allByDefault()));
             }
@@ -153,9 +153,9 @@ public class YAMLObfuscatorTest {
     @Nested
     @DisplayName("invalid YAML")
     @TestInstance(Lifecycle.PER_CLASS)
-    public class InvalidYAML extends ObfuscatorTest {
+    class InvalidYAML extends ObfuscatorTest {
 
-        public InvalidYAML() {
+        InvalidYAML() {
             super("YAMLObfuscator.input.invalid", "YAMLObfuscator.expected.invalid", () -> createObfuscator());
         }
     }
@@ -163,41 +163,41 @@ public class YAMLObfuscatorTest {
     @Nested
     @DisplayName("truncated YAML")
     @TestInstance(Lifecycle.PER_CLASS)
-    public class TruncatedYAML {
+    class TruncatedYAML {
 
         @Nested
         @DisplayName("with warning")
-        public class WithWarning extends TruncatedYAMLTest {
+        class WithWarning extends TruncatedYAMLTest {
 
-            public WithWarning() {
+            WithWarning() {
                 super("YAMLObfuscator.expected.truncated", true);
             }
         }
 
         @Nested
         @DisplayName("without warning")
-        public class WithoutWarning extends TruncatedYAMLTest {
+        class WithoutWarning extends TruncatedYAMLTest {
 
-            public WithoutWarning() {
+            WithoutWarning() {
                 super("YAMLObfuscator.expected.truncated.no-warning", false);
             }
         }
 
         private class TruncatedYAMLTest extends ObfuscatorTest {
 
-            protected TruncatedYAMLTest(String expectedResource, boolean includeWarning) {
+            TruncatedYAMLTest(String expectedResource, boolean includeWarning) {
                 super("YAMLObfuscator.input.truncated", expectedResource, () -> createObfuscator(includeWarning));
             }
         }
     }
 
-    private static class ObfuscatorTest {
+    static class ObfuscatorTest {
 
         private final String input;
         private final String expected;
         private final Supplier<Obfuscator> obfuscatorSupplier;
 
-        protected ObfuscatorTest(String inputResource, String expectedResource, Supplier<Obfuscator> obfuscatorSupplier) {
+        ObfuscatorTest(String inputResource, String expectedResource, Supplier<Obfuscator> obfuscatorSupplier) {
             this.input = readResource(inputResource);
             this.expected = readResource(expectedResource);
             this.obfuscatorSupplier = obfuscatorSupplier;
@@ -205,7 +205,7 @@ public class YAMLObfuscatorTest {
 
         @Test
         @DisplayName("obfuscateText(CharSequence, int, int)")
-        public void testObfuscateTextCharSequence() {
+        void testObfuscateTextCharSequence() {
             Obfuscator obfuscator = obfuscatorSupplier.get();
 
             assertEquals(expected, obfuscator.obfuscateText("x" + input + "x", 1, 1 + input.length()).toString());
@@ -213,7 +213,7 @@ public class YAMLObfuscatorTest {
 
         @Test
         @DisplayName("obfuscateText(CharSequence, int, int, Appendable)")
-        public void testObfuscateTextCharSequenceToAppendable() throws IOException {
+        void testObfuscateTextCharSequenceToAppendable() throws IOException {
             Obfuscator obfuscator = obfuscatorSupplier.get();
 
             StringBuilder destination = new StringBuilder();
@@ -223,7 +223,7 @@ public class YAMLObfuscatorTest {
 
         @Test
         @DisplayName("obfuscateText(Reader, Appendable)")
-        public void testObfuscateTextReaderToAppendable() throws IOException {
+        void testObfuscateTextReaderToAppendable() throws IOException {
             Obfuscator obfuscator = obfuscatorSupplier.get();
 
             StringBuilder destination = new StringBuilder();
@@ -237,7 +237,7 @@ public class YAMLObfuscatorTest {
 
         @Test
         @DisplayName("streamTo(Appendable")
-        public void testStreamTo() throws IOException {
+        void testStreamTo() throws IOException {
             Obfuscator obfuscator = obfuscatorSupplier.get();
 
             Writer writer = new StringWriter();
