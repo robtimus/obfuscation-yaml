@@ -21,26 +21,16 @@ import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.checkStart
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.copyTo;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.discardAll;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.reader;
-import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.skipLeadingWhitespace;
-import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.skipTrailingWhitespace;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snakeyaml.engine.v2.api.LoadSettings;
-import org.snakeyaml.engine.v2.common.Anchor;
-import org.snakeyaml.engine.v2.common.ScalarStyle;
-import org.snakeyaml.engine.v2.events.Event;
-import org.snakeyaml.engine.v2.events.ScalarEvent;
 import org.snakeyaml.engine.v2.exceptions.YamlEngineException;
-import org.snakeyaml.engine.v2.parser.Parser;
 import org.snakeyaml.engine.v2.parser.ParserImpl;
 import org.snakeyaml.engine.v2.scanner.StreamReader;
 import com.github.robtimus.obfuscation.Obfuscator;
@@ -102,217 +92,21 @@ public final class YAMLObfuscator extends Obfuscator {
     }
 
     private void obfuscateText(Reader input, CharSequence s, int start, int end, Appendable destination) throws IOException {
-        Parser parser = new ParserImpl(new StreamReader(input, settings), settings);
-        Context context = new Context(parser, s, start, end, destination);
-        Event event = null;
+        ObfuscatingParser parser = new ObfuscatingParser(new ParserImpl(new StreamReader(input, settings), settings),
+                s, start, end, destination, properties);
+
         try {
-            while (context.hasNextEvent()) {
-                event = context.nextEvent();
-                if (event.getEventId() == Event.ID.Scalar && context.hasCurrentFieldName()) {
-                    String property = context.currentFieldName();
-                    PropertyConfig propertyConfig = properties.get(property);
-                    if (propertyConfig != null) {
-                        obfuscateProperty(propertyConfig, context);
-                    }
-                }
+            while (parser.hasNext()) {
+                parser.next();
             }
             // read the remainder so the final append will include all text
             discardAll(input);
-            context.appendRemainder();
+            parser.appendRemainder();
         } catch (YamlEngineException e) {
             LOGGER.warn(Messages.YAMLObfuscator.malformedYAML.warning.get(), e);
             if (malformedYAMLWarning != null) {
                 destination.append(malformedYAMLWarning);
             }
-        }
-    }
-
-    private void obfuscateProperty(PropertyConfig propertyConfig, Context context) throws IOException {
-        Event event = context.nextEvent();
-        switch (event.getEventId()) {
-        case SequenceStart:
-            if (!propertyConfig.obfuscateSequences) {
-                // there is an obfuscator for the sequence property, but the obfuscation mode prohibits obfuscating sequences;
-                // abort and continue with the next property
-                return;
-            }
-            context.appendUntilEvent(event);
-            obfuscateNested(propertyConfig.obfuscator, context, event, Event.ID.SequenceStart, Event.ID.SequenceEnd);
-            break;
-        case MappingStart:
-            if (!propertyConfig.obfuscateMappings) {
-                // there is an obfuscator for the mapping property, but the obfuscation mode prohibits obfuscating mappings;
-                // abort and continue with the next property
-                return;
-            }
-            context.appendUntilEvent(event);
-            obfuscateNested(propertyConfig.obfuscator, context, event, Event.ID.MappingStart, Event.ID.MappingEnd);
-            break;
-        case Scalar:
-            context.appendUntilEvent(event);
-            obfuscateScalar(propertyConfig.obfuscator, context, event);
-            break;
-        default:
-            // do nothing
-            break;
-        }
-    }
-
-    private void obfuscateNested(Obfuscator obfuscator, Context context, Event startEvent, Event.ID beginEventId, Event.ID endEventId)
-            throws IOException {
-
-        int depth = 1;
-        Event endEvent = null;
-        while (depth > 0 && context.hasNextEvent()) {
-            endEvent = context.nextEvent();
-            if (endEvent.getEventId() == beginEventId) {
-                depth++;
-            } else if (endEvent.getEventId() == endEventId) {
-                depth--;
-            }
-        }
-        context.obfuscateUntilEvent(startEvent, endEvent, obfuscator);
-    }
-
-    private void obfuscateScalar(Obfuscator obfuscator, Context context, Event event) throws IOException {
-        context.obfuscateEvent(event, obfuscator);
-    }
-
-    private static final class Context {
-        private final Parser parser;
-        private final CharSequence text;
-        private final Appendable destination;
-
-        private final int textOffset;
-        private final int textEnd;
-        private int textIndex;
-
-        // Snakeyaml reports field names as Scalar events. The only difference with actual values is the current state.
-        // We need to keep track of this state, more specifically whether or not the current structure is a mapping or no, and the current field name.
-        private final Deque<Event.ID> structureStack = new ArrayDeque<>();
-        private String currentFieldName;
-
-        private Context(Parser parser, CharSequence source, int start, int end, Appendable destination) {
-            this.parser = parser;
-            this.text = source;
-            this.textOffset = start;
-            this.textEnd = end;
-            this.textIndex = start;
-            this.destination = destination;
-        }
-
-        private boolean hasNextEvent() {
-            return parser.hasNext();
-        }
-
-        private Event nextEvent() {
-            Event event = parser.next();
-            Event.ID eventId = event.getEventId();
-            switch (eventId) {
-            case StreamStart:
-            case DocumentStart:
-            case SequenceStart:
-            case MappingStart:
-                structureStack.addLast(eventId);
-                currentFieldName = null;
-                break;
-            case StreamEnd:
-            case DocumentEnd:
-            case SequenceEnd:
-            case MappingEnd:
-                structureStack.removeLast();
-                currentFieldName = null;
-                break;
-            case Alias:
-                currentFieldName = null;
-                break;
-            case Scalar:
-                if (structureStack.peekLast() == Event.ID.MappingStart && currentFieldName == null) {
-                    // directly inside a sequence, and there is no current field name, so this must be it
-                    currentFieldName = ((ScalarEvent) event).getValue();
-                } else {
-                    currentFieldName = null;
-                }
-                break;
-            default:
-                break;
-            }
-            return event;
-        }
-
-        private boolean hasCurrentFieldName() {
-            return currentFieldName != null;
-        }
-
-        private String currentFieldName() {
-            return currentFieldName;
-        }
-
-        private void appendUntilEvent(Event event) throws IOException {
-            int eventStartIndex = startIndex(event);
-            destination.append(text, textIndex, eventStartIndex);
-            textIndex = eventStartIndex;
-        }
-
-        private void obfuscateUntilEvent(Event startEvent, Event endEvent, Obfuscator obfuscator) throws IOException {
-            int startEventStartIndex = startIndex(startEvent);
-            int eventEndIndex = endIndex(endEvent);
-            // don't include any trailing white space
-            eventEndIndex = skipTrailingWhitespace(text, startEventStartIndex, eventEndIndex);
-
-            obfuscator.obfuscateText(text, startEventStartIndex, eventEndIndex, destination);
-            textIndex = eventEndIndex;
-        }
-
-        private void obfuscateEvent(Event event, Obfuscator obfuscator) throws IOException {
-            int eventStartIndex = startIndex(event);
-            int eventEndIndex = endIndex(event);
-
-            ScalarEvent scalarEvent = (ScalarEvent) event;
-
-            // don't obfuscate any anchor
-            eventStartIndex = appendAnchor(scalarEvent, eventStartIndex, eventEndIndex);
-
-            // don't obfuscate any " or ' around the actual value
-            ScalarStyle scalarStyle = scalarEvent.getScalarStyle();
-            if (scalarStyle == ScalarStyle.DOUBLE_QUOTED || scalarStyle == ScalarStyle.SINGLE_QUOTED) {
-                destination.append(text.charAt(eventStartIndex));
-                obfuscator.obfuscateText(text, eventStartIndex + 1, eventEndIndex - 1, destination);
-                destination.append(text.charAt(eventEndIndex - 1));
-            } else {
-                obfuscator.obfuscateText(text, eventStartIndex, eventEndIndex, destination);
-            }
-            textIndex = eventEndIndex;
-        }
-
-        private int appendAnchor(ScalarEvent event, int eventStartIndex, int eventEndIndex) throws IOException {
-            Optional<Anchor> anchor = event.getAnchor();
-            if (anchor.isPresent()) {
-                // skip past the & and anchor name
-                int newStartIndex = eventStartIndex;
-                // In snakeyaml-engine 2.0, class Anchor has method getAnchor()
-                // In snakeyaml-engine 2.1 that was replaced by method getValue()
-                // To support both, use toString() that returns the anchor/value for both versions
-                newStartIndex += 1 + anchor.get().toString().length();
-                newStartIndex = skipLeadingWhitespace(text, newStartIndex, eventEndIndex);
-                destination.append(text, eventStartIndex, newStartIndex);
-                return newStartIndex;
-            }
-            return eventStartIndex;
-        }
-
-        private void appendRemainder() throws IOException {
-            int end = textEnd == -1 ? text.length() : textEnd;
-            destination.append(text, textIndex, end);
-            textIndex = end;
-        }
-
-        private int startIndex(Event event) {
-            return textOffset + event.getStartMark().get().getIndex();
-        }
-
-        private int endIndex(Event event) {
-            return textOffset + event.getEndMark().get().getIndex();
         }
     }
 
@@ -716,42 +510,6 @@ public final class YAMLObfuscator extends Obfuscator {
             addLastProperty();
 
             return new YAMLObfuscator(this);
-        }
-    }
-
-    private static final class PropertyConfig {
-
-        private final Obfuscator obfuscator;
-        private final boolean obfuscateMappings;
-        private final boolean obfuscateSequences;
-
-        private PropertyConfig(Obfuscator obfuscator, boolean obfuscateMappings, boolean obfuscateSequences) {
-            this.obfuscator = Objects.requireNonNull(obfuscator);
-            this.obfuscateMappings = obfuscateMappings;
-            this.obfuscateSequences = obfuscateSequences;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            // null and different types should not occur
-            PropertyConfig other = (PropertyConfig) o;
-            return obfuscator.equals(other.obfuscator)
-                    && obfuscateMappings == other.obfuscateMappings
-                    && obfuscateSequences == other.obfuscateSequences;
-        }
-
-        @Override
-        public int hashCode() {
-            return obfuscator.hashCode() ^ Boolean.hashCode(obfuscateMappings) ^ Boolean.hashCode(obfuscateSequences);
-        }
-
-        @Override
-        @SuppressWarnings("nls")
-        public String toString() {
-            return "[obfuscator=" + obfuscator
-                    + ",obfuscateMappings=" + obfuscateMappings
-                    + ",obfuscateSequences=" + obfuscateSequences
-                    + "]";
         }
     }
 }
