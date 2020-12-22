@@ -220,7 +220,7 @@ public final class YAMLObfuscator extends Obfuscator {
 
         /**
          * Indicates that by default properties will not be obfuscated if they are YAML mappings.
-         * This can be overridden per property using {@link PropertyConfigurer#excludeMappings()}
+         * This can be overridden per property using {@link PropertyConfigurer#includeMappings()}
          * <p>
          * Note that this will not change what will be obfuscated for any property that was already added.
          *
@@ -230,7 +230,7 @@ public final class YAMLObfuscator extends Obfuscator {
 
         /**
          * Indicates that by default properties will not be obfuscated if they are YAML sequences.
-         * This can be overridden per property using {@link PropertyConfigurer#excludeSequences()}
+         * This can be overridden per property using {@link PropertyConfigurer#includeSequences()}
          * <p>
          * Note that this will not change what will be obfuscated for any property that was already added.
          *
