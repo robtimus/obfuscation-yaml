@@ -62,7 +62,7 @@
   </issueManagement>
 
   <properties>
-    <version.snakeyaml>2.2.1</version.snakeyaml>
+    <version.snakeyaml>2.3</version.snakeyaml>
     <version.obfuscation-core>1.3</version.obfuscation-core>
   </properties>
 
