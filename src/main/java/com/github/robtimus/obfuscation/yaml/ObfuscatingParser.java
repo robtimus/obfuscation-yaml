@@ -86,34 +86,34 @@ final class ObfuscatingParser implements Parser {
     public Event next() {
         Event event = delegate.next();
         switch (event.getEventId()) {
-        case StreamStart:
-        case DocumentStart:
-            startStructure(event.getEventId());
-            break;
-        case StreamEnd:
-        case DocumentEnd:
-            endStructure();
-            break;
-        case MappingStart:
-            startMapping(event);
-            break;
-        case MappingEnd:
-            endMapping(event);
-            break;
-        case SequenceStart:
-            startSequence(event);
-            break;
-        case SequenceEnd:
-            endSequence(event);
-            break;
-        case Alias:
-            alias();
-            break;
-        case Scalar:
-            scalar(event);
-            break;
-        default:
-            break;
+            case StreamStart:
+            case DocumentStart:
+                startStructure(event.getEventId());
+                break;
+            case StreamEnd:
+            case DocumentEnd:
+                endStructure();
+                break;
+            case MappingStart:
+                startMapping(event);
+                break;
+            case MappingEnd:
+                endMapping(event);
+                break;
+            case SequenceStart:
+                startSequence(event);
+                break;
+            case SequenceEnd:
+                endSequence(event);
+                break;
+            case Alias:
+                alias();
+                break;
+            case Scalar:
+                scalar(event);
+                break;
+            default:
+                break;
         }
         return event;
     }
