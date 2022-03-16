@@ -22,6 +22,7 @@ import static com.github.robtimus.obfuscation.Obfuscator.none;
 import static com.github.robtimus.obfuscation.support.CaseSensitivity.CASE_SENSITIVE;
 import static com.github.robtimus.obfuscation.yaml.YAMLObfuscator.builder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -65,6 +66,10 @@ class YAMLObfuscatorTest {
                 arguments(obfuscator, createObfuscator(builder().withProperty("test", fixedLength(3))), false),
                 arguments(obfuscator, createObfuscator(builder().withProperty("test", none()).excludeMappings()), false),
                 arguments(obfuscator, createObfuscator(builder().withProperty("test", none()).excludeSequences()), false),
+                arguments(obfuscator, createObfuscator(builder().withProperty("test", none()).limitTo(Long.MAX_VALUE)), true),
+                arguments(obfuscator, createObfuscator(builder().withProperty("test", none()).limitTo(1024)), false),
+                arguments(obfuscator, createObfuscator(builder().withProperty("test", none()).limitTo(Long.MAX_VALUE).withTruncatedIndicator(null)),
+                        false),
                 arguments(obfuscator, builder().build(), false),
                 arguments(obfuscator, createObfuscator(builder().withProperty("test", none()).withMalformedYAMLWarning(null)), false),
                 arguments(obfuscator, "foo", false),
@@ -77,6 +82,23 @@ class YAMLObfuscatorTest {
         Obfuscator obfuscator = createObfuscator();
         assertEquals(obfuscator.hashCode(), obfuscator.hashCode());
         assertEquals(obfuscator.hashCode(), createObfuscator().hashCode());
+    }
+
+    @Nested
+    @DisplayName("Builder")
+    class BuilderTest {
+
+        @Nested
+        @DisplayName("limitTo")
+        class LimitTo {
+
+            @Test
+            @DisplayName("negative limit")
+            void testNegativeLimit() {
+                Builder builder = builder();
+                assertThrows(IllegalArgumentException.class, () -> builder.limitTo(-1));
+            }
+        }
     }
 
     @Nested
@@ -146,6 +168,34 @@ class YAMLObfuscatorTest {
             ObfuscatingScalarsOverridden() {
                 super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.scalar",
                         () -> createObfuscatorObfuscatingScalarsOnly(builder().allByDefault()));
+            }
+        }
+
+        @Nested
+        @DisplayName("limited")
+        @TestInstance(Lifecycle.PER_CLASS)
+        class Limited {
+
+            @Nested
+            @DisplayName("with truncated indicator")
+            @TestInstance(Lifecycle.PER_CLASS)
+            class WithTruncatedIndicator extends ObfuscatorTest {
+
+                WithTruncatedIndicator() {
+                    super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.limited.with-indicator",
+                            () -> createObfuscator(builder().limitTo(413)));
+                }
+            }
+
+            @Nested
+            @DisplayName("without truncated indicator")
+            @TestInstance(Lifecycle.PER_CLASS)
+            class WithoutTruncatedIndicator extends ObfuscatorTest {
+
+                WithoutTruncatedIndicator() {
+                    super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.limited.without-indicator",
+                            () -> createObfuscator(builder().limitTo(413).withTruncatedIndicator(null)));
+                }
             }
         }
     }
@@ -349,6 +399,6 @@ class YAMLObfuscatorTest {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        return sb.toString();
+        return sb.toString().replace("\r", "");
     }
 }

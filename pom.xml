@@ -63,9 +63,7 @@
 
   <properties>
     <version.snakeyaml>2.1</version.snakeyaml>
-    <version.obfuscation-core>1.3</version.obfuscation-core>
-    <!-- Use version 1.7.30 to match the latest release; this will allow Snyk to warn for vulnerabilities -->
-    <version.slf4j>1.7.30</version.slf4j>
+    <version.obfuscation-core>1.4</version.obfuscation-core>
   </properties>
 
   <dependencies>

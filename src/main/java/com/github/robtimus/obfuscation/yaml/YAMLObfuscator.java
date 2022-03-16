@@ -17,8 +17,10 @@
 
 package com.github.robtimus.obfuscation.yaml;
 
+import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.appendAtMost;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.checkStartAndEnd;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.copyTo;
+import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.counting;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.discardAll;
 import static com.github.robtimus.obfuscation.support.ObfuscatorUtils.reader;
 import java.io.IOException;
@@ -36,6 +38,8 @@ import org.snakeyaml.engine.v2.scanner.StreamReader;
 import com.github.robtimus.obfuscation.Obfuscator;
 import com.github.robtimus.obfuscation.support.CachingObfuscatingWriter;
 import com.github.robtimus.obfuscation.support.CaseSensitivity;
+import com.github.robtimus.obfuscation.support.CountingReader;
+import com.github.robtimus.obfuscation.support.LimitAppendable;
 import com.github.robtimus.obfuscation.support.MapBuilder;
 
 /**
@@ -53,6 +57,9 @@ public final class YAMLObfuscator extends Obfuscator {
 
     private final String malformedYAMLWarning;
 
+    private final long limit;
+    private final String truncatedIndicator;
+
     private YAMLObfuscator(ObfuscatorBuilder builder) {
         properties = builder.properties();
 
@@ -65,6 +72,9 @@ public final class YAMLObfuscator extends Obfuscator {
                 .build();
 
         malformedYAMLWarning = builder.malformedYAMLWarning;
+
+        limit = builder.limit;
+        truncatedIndicator = builder.truncatedIndicator;
     }
 
     @Override
@@ -79,24 +89,32 @@ public final class YAMLObfuscator extends Obfuscator {
     public void obfuscateText(CharSequence s, int start, int end, Appendable destination) throws IOException {
         checkStartAndEnd(s, start, end);
         @SuppressWarnings("resource")
-        Reader input = reader(s, start, end);
-        obfuscateText(input, s, start, end, destination);
+        Reader reader = reader(s, start, end);
+        LimitAppendable appendable = appendAtMost(destination, limit);
+        obfuscateText(reader, s, start, end, appendable);
+        if (appendable.limitExceeded() && truncatedIndicator != null) {
+            destination.append(String.format(truncatedIndicator, end - start));
+        }
     }
 
     @Override
     public void obfuscateText(Reader input, Appendable destination) throws IOException {
         StringBuilder contents = new StringBuilder();
         @SuppressWarnings("resource")
-        Reader reader = copyTo(input, contents);
-        obfuscateText(reader, contents, 0, -1, destination);
+        CountingReader reader = counting(copyTo(input, contents));
+        LimitAppendable appendable = appendAtMost(destination, limit);
+        obfuscateText(reader, contents, 0, -1, appendable);
+        if (appendable.limitExceeded() && truncatedIndicator != null) {
+            destination.append(String.format(truncatedIndicator, reader.count()));
+        }
     }
 
-    private void obfuscateText(Reader input, CharSequence s, int start, int end, Appendable destination) throws IOException {
+    private void obfuscateText(Reader input, CharSequence s, int start, int end, LimitAppendable destination) throws IOException {
         ObfuscatingParser parser = new ObfuscatingParser(new ParserImpl(new StreamReader(input, settings), settings),
                 s, start, end, destination, properties);
 
         try {
-            while (parser.hasNext()) {
+            while (parser.hasNext() && !destination.limitExceeded()) {
                 parser.next();
             }
             // read the remainder so the final append will include all text
@@ -125,12 +143,14 @@ public final class YAMLObfuscator extends Obfuscator {
         }
         YAMLObfuscator other = (YAMLObfuscator) o;
         return properties.equals(other.properties)
-                && Objects.equals(malformedYAMLWarning, other.malformedYAMLWarning);
+                && Objects.equals(malformedYAMLWarning, other.malformedYAMLWarning)
+                && limit == other.limit
+                && Objects.equals(truncatedIndicator, other.truncatedIndicator);
     }
 
     @Override
     public int hashCode() {
-        return properties.hashCode() ^ Objects.hashCode(malformedYAMLWarning);
+        return properties.hashCode() ^ Objects.hashCode(malformedYAMLWarning) ^ Long.hashCode(limit) ^ Objects.hashCode(truncatedIndicator);
     }
 
     @Override
@@ -139,6 +159,8 @@ public final class YAMLObfuscator extends Obfuscator {
         return getClass().getName()
                 + "[properties=" + properties
                 + ",malformedYAMLWarning=" + malformedYAMLWarning
+                + ",limit=" + limit
+                + ",truncatedIndicator=" + truncatedIndicator
                 + "]";
     }
 
@@ -156,11 +178,7 @@ public final class YAMLObfuscator extends Obfuscator {
      *
      * @author Rob Spoor
      */
-    public abstract static class Builder {
-
-        private Builder() {
-            super();
-        }
+    public interface Builder {
 
         /**
          * Adds a property to obfuscate.
@@ -173,7 +191,7 @@ public final class YAMLObfuscator extends Obfuscator {
          * @throws NullPointerException If the given property name or obfuscator is {@code null}.
          * @throws IllegalArgumentException If a property with the same name and the same case sensitivity was already added.
          */
-        public abstract PropertyConfigurer withProperty(String property, Obfuscator obfuscator);
+        PropertyConfigurer withProperty(String property, Obfuscator obfuscator);
 
         /**
          * Adds a property to obfuscate.
@@ -185,7 +203,7 @@ public final class YAMLObfuscator extends Obfuscator {
          * @throws NullPointerException If the given property name, obfuscator or case sensitivity is {@code null}.
          * @throws IllegalArgumentException If a property with the same name and the same case sensitivity was already added.
          */
-        public abstract PropertyConfigurer withProperty(String property, Obfuscator obfuscator, CaseSensitivity caseSensitivity);
+        PropertyConfigurer withProperty(String property, Obfuscator obfuscator, CaseSensitivity caseSensitivity);
 
         /**
          * Sets the default case sensitivity for new properties to {@link CaseSensitivity#CASE_SENSITIVE}. This is the default setting.
@@ -194,7 +212,7 @@ public final class YAMLObfuscator extends Obfuscator {
          *
          * @return This object.
          */
-        public abstract Builder caseSensitiveByDefault();
+        Builder caseSensitiveByDefault();
 
         /**
          * Sets the default case sensitivity for new properties to {@link CaseSensitivity#CASE_INSENSITIVE}.
@@ -203,7 +221,7 @@ public final class YAMLObfuscator extends Obfuscator {
          *
          * @return This object.
          */
-        public abstract Builder caseInsensitiveByDefault();
+        Builder caseInsensitiveByDefault();
 
         /**
          * Indicates that by default properties will not be obfuscated if they are YAML mappings or sequences.
@@ -213,7 +231,7 @@ public final class YAMLObfuscator extends Obfuscator {
          *
          * @return This object.
          */
-        public Builder scalarsOnlyByDefault() {
+        default Builder scalarsOnlyByDefault() {
             return excludeMappingsByDefault()
                     .excludeSequencesByDefault();
         }
@@ -226,7 +244,7 @@ public final class YAMLObfuscator extends Obfuscator {
          *
          * @return This object.
          */
-        public abstract Builder excludeMappingsByDefault();
+        Builder excludeMappingsByDefault();
 
         /**
          * Indicates that by default properties will not be obfuscated if they are YAML sequences.
@@ -236,7 +254,7 @@ public final class YAMLObfuscator extends Obfuscator {
          *
          * @return This object.
          */
-        public abstract Builder excludeSequencesByDefault();
+        Builder excludeSequencesByDefault();
 
         /**
          * Indicates that by default properties will be obfuscated if they are YAML mappings or sequences (default).
@@ -246,7 +264,7 @@ public final class YAMLObfuscator extends Obfuscator {
          *
          * @return This object.
          */
-        public Builder allByDefault() {
+        default Builder allByDefault() {
             return includeMappingsByDefault()
                     .includeSequencesByDefault();
         }
@@ -259,7 +277,7 @@ public final class YAMLObfuscator extends Obfuscator {
          *
          * @return This object.
          */
-        public abstract Builder includeMappingsByDefault();
+        Builder includeMappingsByDefault();
 
         /**
          * Indicates that by default properties will be obfuscated if they are YAML sequences (default).
@@ -269,7 +287,7 @@ public final class YAMLObfuscator extends Obfuscator {
          *
          * @return This object.
          */
-        public abstract Builder includeSequencesByDefault();
+        Builder includeSequencesByDefault();
 
         /**
          * Sets the warning to include if a {@link YamlEngineException} is thrown.
@@ -278,7 +296,18 @@ public final class YAMLObfuscator extends Obfuscator {
          * @param warning The warning to include.
          * @return This object.
          */
-        public abstract Builder withMalformedYAMLWarning(String warning);
+        Builder withMalformedYAMLWarning(String warning);
+
+        /**
+         * Sets the limit for the obfuscated result.
+         *
+         * @param limit The limit to use.
+         * @return An object that can be used to configure the handling when the obfuscated result exceeds a pre-defined limit,
+         *         or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         * @throws IllegalArgumentException If the given limit is negative.
+         * @since 1.1
+         */
+        LimitConfigurer limitTo(long limit);
 
         /**
          * This method allows the application of a function to this builder.
@@ -289,7 +318,7 @@ public final class YAMLObfuscator extends Obfuscator {
          * @param f The function to apply.
          * @return The result of applying the function to this builder.
          */
-        public <R> R transform(Function<? super Builder, ? extends R> f) {
+        default <R> R transform(Function<? super Builder, ? extends R> f) {
             return f.apply(this);
         }
 
@@ -298,7 +327,7 @@ public final class YAMLObfuscator extends Obfuscator {
          *
          * @return The created {@code YAMLObfuscator}.
          */
-        public abstract YAMLObfuscator build();
+        YAMLObfuscator build();
     }
 
     /**
@@ -306,11 +335,7 @@ public final class YAMLObfuscator extends Obfuscator {
      *
      * @author Rob Spoor
      */
-    public abstract static class PropertyConfigurer extends Builder {
-
-        private PropertyConfigurer() {
-            super();
-        }
+    public interface PropertyConfigurer extends Builder {
 
         /**
          * Indicates that properties with the current name will not be obfuscated if they are YAML mappings or sequences.
@@ -318,7 +343,7 @@ public final class YAMLObfuscator extends Obfuscator {
          *
          * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
          */
-        public PropertyConfigurer scalarsOnly() {
+        default PropertyConfigurer scalarsOnly() {
             return excludeMappings()
                     .excludeSequences();
         }
@@ -328,14 +353,14 @@ public final class YAMLObfuscator extends Obfuscator {
          *
          * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
          */
-        public abstract PropertyConfigurer excludeMappings();
+        PropertyConfigurer excludeMappings();
 
         /**
          * Indicates that properties with the current name will not be obfuscated if they are YAML sequences.
          *
          * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
          */
-        public abstract PropertyConfigurer excludeSequences();
+        PropertyConfigurer excludeSequences();
 
         /**
          * Indicates that properties with the current name will be obfuscated if they are YAML mappings or sequences.
@@ -343,7 +368,7 @@ public final class YAMLObfuscator extends Obfuscator {
          *
          * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
          */
-        public PropertyConfigurer all() {
+        default PropertyConfigurer all() {
             return includeMappings()
                     .includeSequences();
         }
@@ -353,21 +378,44 @@ public final class YAMLObfuscator extends Obfuscator {
          *
          * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
          */
-        public abstract PropertyConfigurer includeMappings();
+        PropertyConfigurer includeMappings();
 
         /**
          * Indicates that properties with the current name will be obfuscated if they are YAML sequences.
          *
          * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
          */
-        public abstract PropertyConfigurer includeSequences();
+        PropertyConfigurer includeSequences();
     }
 
-    private static final class ObfuscatorBuilder extends PropertyConfigurer {
+    /**
+     * An object that can be used to configure handling when the obfuscated result exceeds a pre-defined limit.
+     *
+     * @author Rob Spoor
+     * @since 1.1
+     */
+    public interface LimitConfigurer extends Builder {
+
+        /**
+         * Sets the indicator to use when the obfuscated result is truncated due to the limit being exceeded.
+         * There can be one place holder for the total number of characters. Defaults to {@code ... (total: %d)}.
+         * Use {@code null} to omit the indicator.
+         *
+         * @param pattern The pattern to use as indicator.
+         * @return An object that can be used to configure the handling when the obfuscated result exceeds a pre-defined limit,
+         *         or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         */
+        LimitConfigurer withTruncatedIndicator(String pattern);
+    }
+
+    private static final class ObfuscatorBuilder implements PropertyConfigurer, LimitConfigurer {
 
         private final MapBuilder<PropertyConfig> properties;
 
         private String malformedYAMLWarning;
+
+        private long limit;
+        private String truncatedIndicator;
 
         // default settings
         private boolean obfuscateMappingsByDefault;
@@ -382,7 +430,11 @@ public final class YAMLObfuscator extends Obfuscator {
 
         private ObfuscatorBuilder() {
             properties = new MapBuilder<>();
+
             malformedYAMLWarning = Messages.YAMLObfuscator.malformedYAML.text.get();
+
+            limit = Long.MAX_VALUE;
+            truncatedIndicator = "... (total: %d)"; //$NON-NLS-1$
 
             obfuscateMappingsByDefault = true;
             obfuscateSequencesByDefault = true;
@@ -481,6 +533,21 @@ public final class YAMLObfuscator extends Obfuscator {
         @Override
         public Builder withMalformedYAMLWarning(String warning) {
             malformedYAMLWarning = warning;
+            return this;
+        }
+
+        @Override
+        public LimitConfigurer limitTo(long limit) {
+            if (limit < 0) {
+                throw new IllegalArgumentException(limit + " < 0"); //$NON-NLS-1$
+            }
+            this.limit = limit;
+            return this;
+        }
+
+        @Override
+        public LimitConfigurer withTruncatedIndicator(String pattern) {
+            this.truncatedIndicator = pattern;
             return this;
         }
 
