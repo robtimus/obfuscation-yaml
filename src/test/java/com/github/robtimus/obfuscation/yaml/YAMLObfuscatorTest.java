@@ -243,11 +243,6 @@ class YAMLObfuscatorTest {
         InvalidYAML() {
             super("YAMLObfuscator.input.invalid", "YAMLObfuscator.expected.invalid", () -> createObfuscator());
         }
-
-        @Override
-        boolean truncatesWhenReadingFromReader() {
-            return false;
-        }
     }
 
     @Nested
@@ -394,15 +389,7 @@ class YAMLObfuscatorTest {
             verify(reader, never()).close();
             verify(destination, never()).close();
 
-            if (truncatesWhenReadingFromReader()) {
-                assertTruncationLogging(appender);
-            } else {
-                assertNoTruncationLogging(appender);
-            }
-        }
-
-        boolean truncatesWhenReadingFromReader() {
-            return true;
+            assertTruncationLogging(appender);
         }
 
         @Test
