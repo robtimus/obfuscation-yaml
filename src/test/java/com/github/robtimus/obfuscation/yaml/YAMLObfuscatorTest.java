@@ -20,6 +20,7 @@ package com.github.robtimus.obfuscation.yaml;
 import static com.github.robtimus.obfuscation.Obfuscator.fixedLength;
 import static com.github.robtimus.obfuscation.Obfuscator.none;
 import static com.github.robtimus.obfuscation.support.CaseSensitivity.CASE_SENSITIVE;
+import static com.github.robtimus.obfuscation.yaml.Source.OfReader.DEFAULT_PREFERRED_MAX_BUFFER_SIZE;
 import static com.github.robtimus.obfuscation.yaml.YAMLObfuscator.builder;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.everyItem;
@@ -545,7 +546,7 @@ class YAMLObfuscatorTest {
                 .withProperty("anchor", obfuscator)
                 .withProperty("alias", obfuscator)
                 .withProperty("notObfuscated", none())
-                .withMaxDocumentSize(10 * 1024 * 1024)
+                .withMaxDocumentSize(10 * DEFAULT_PREFERRED_MAX_BUFFER_SIZE)
                 .build();
     }
 
@@ -564,7 +565,7 @@ class YAMLObfuscatorTest {
                 .withProperty("ANCHOR", obfuscator)
                 .withProperty("ALIAS", obfuscator)
                 .withProperty("NOTOBFUSCATED", none())
-                .withMaxDocumentSize(10 * 1024 * 1024)
+                .withMaxDocumentSize(10 * DEFAULT_PREFERRED_MAX_BUFFER_SIZE)
                 .build();
     }
 
@@ -583,7 +584,7 @@ class YAMLObfuscatorTest {
                 .withProperty("anchor", obfuscator).all()
                 .withProperty("alias", obfuscator).all()
                 .withProperty("notObfuscated", none()).all()
-                .withMaxDocumentSize(10 * 1024 * 1024)
+                .withMaxDocumentSize(10 * DEFAULT_PREFERRED_MAX_BUFFER_SIZE)
                 .build();
     }
 
@@ -602,7 +603,7 @@ class YAMLObfuscatorTest {
                 .withProperty("anchor", obfuscator).scalarsOnly()
                 .withProperty("alias", obfuscator).scalarsOnly()
                 .withProperty("notObfuscated", none()).scalarsOnly()
-                .withMaxDocumentSize(10 * 1024 * 1024)
+                .withMaxDocumentSize(10 * DEFAULT_PREFERRED_MAX_BUFFER_SIZE)
                 .build();
     }
 

@@ -128,10 +128,8 @@ public final class YAMLObfuscator extends Obfuscator {
         }
     }
 
-    // Keep using the deprecated constructors, to support older versions of SnakeYAML.
-    @SuppressWarnings("deprecation")
     private ObfuscatingParser createParser(Reader input, Source source, int start, int end, LimitAppendable destination) {
-        return new ObfuscatingParser(new ParserImpl(new StreamReader(input, settings), settings), source, start, end, destination, properties);
+        return new ObfuscatingParser(new ParserImpl(settings, new StreamReader(settings, input)), source, start, end, destination, properties);
     }
 
     @Override
