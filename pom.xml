@@ -286,7 +286,7 @@
     <profile>
       <id>min-versions</id>
       <properties>
-        <version.snakeyaml>2.0</version.snakeyaml>
+        <version.snakeyaml>2.5</version.snakeyaml>
       </properties>
     </profile>
 
