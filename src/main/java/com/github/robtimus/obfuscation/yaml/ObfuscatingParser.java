@@ -300,13 +300,13 @@ final class ObfuscatingParser implements Parser {
 
     private int startIndex(Event event) {
         return textOffset + event.getStartMark()
-                .orElseThrow(() -> new IllegalStateException(Messages.YAMLObfuscator.markNotAvailable.get()))
+                .orElseThrow(() -> new IllegalStateException(Messages.YAMLObfuscator.markNotAvailable()))
                 .getIndex();
     }
 
     private int endIndex(Event event) {
         return textOffset + event.getEndMark()
-                .orElseThrow(() -> new IllegalStateException(Messages.YAMLObfuscator.markNotAvailable.get()))
+                .orElseThrow(() -> new IllegalStateException(Messages.YAMLObfuscator.markNotAvailable()))
                 .getIndex();
     }
 

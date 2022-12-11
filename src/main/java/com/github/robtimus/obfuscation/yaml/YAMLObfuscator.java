@@ -110,8 +110,7 @@ public final class YAMLObfuscator extends Obfuscator {
     }
 
     private void obfuscateText(Reader input, CharSequence s, int start, int end, LimitAppendable destination) throws IOException {
-        ObfuscatingParser parser = new ObfuscatingParser(new ParserImpl(new StreamReader(input, settings), settings),
-                s, start, end, destination, properties);
+        ObfuscatingParser parser = createParser(input, s, start, end, destination);
 
         try {
             while (parser.hasNext() && !destination.limitExceeded()) {
@@ -121,11 +120,17 @@ public final class YAMLObfuscator extends Obfuscator {
             discardAll(input);
             parser.appendRemainder();
         } catch (YamlEngineException e) {
-            LOGGER.warn(Messages.YAMLObfuscator.malformedYAML.warning.get(), e);
+            LOGGER.warn(Messages.YAMLObfuscator.malformedYAML.warning(), e);
             if (malformedYAMLWarning != null) {
                 destination.append(malformedYAMLWarning);
             }
         }
+    }
+
+    // Keep using the deprecated constructors, to support older versions of SnakeYAML.
+    @SuppressWarnings("deprecation")
+    private ObfuscatingParser createParser(Reader input, CharSequence s, int start, int end, LimitAppendable destination) {
+        return new ObfuscatingParser(new ParserImpl(new StreamReader(input, settings), settings), s, start, end, destination, properties);
     }
 
     @Override
@@ -431,7 +436,7 @@ public final class YAMLObfuscator extends Obfuscator {
         private ObfuscatorBuilder() {
             properties = new MapBuilder<>();
 
-            malformedYAMLWarning = Messages.YAMLObfuscator.malformedYAML.text.get();
+            malformedYAMLWarning = Messages.YAMLObfuscator.malformedYAML.text();
 
             limit = Long.MAX_VALUE;
             truncatedIndicator = "... (total: %d)"; //$NON-NLS-1$
