@@ -23,10 +23,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.github.robtimus.obfuscation.Obfuscator;
 import com.github.robtimus.obfuscation.support.CountingReader;
+import com.github.robtimus.obfuscation.support.ObfuscatorUtils;
 
 interface Source {
 
     char charAt(int index);
+
+    int skipLeadingWhitespace(int fromIndex, int toIndex);
+
+    int skipTrailingWhitespace(int fromIndex, int toIndex);
 
     void appendTo(int from, int to, Appendable destination) throws IOException;
 
@@ -49,6 +54,16 @@ interface Source {
         @Override
         public char charAt(int index) {
             return s.charAt(index);
+        }
+
+        @Override
+        public int skipLeadingWhitespace(int fromIndex, int toIndex) {
+            return ObfuscatorUtils.skipLeadingWhitespace(s, fromIndex, toIndex);
+        }
+
+        @Override
+        public int skipTrailingWhitespace(int fromIndex, int toIndex) {
+            return ObfuscatorUtils.skipTrailingWhitespace(s, fromIndex, toIndex);
         }
 
         @Override
@@ -111,6 +126,16 @@ interface Source {
         @Override
         public char charAt(int index) {
             return buffer.charAt(index - offset);
+        }
+
+        @Override
+        public int skipLeadingWhitespace(int fromIndex, int toIndex) {
+            return ObfuscatorUtils.skipLeadingWhitespace(buffer, fromIndex - offset, toIndex - offset) + offset;
+        }
+
+        @Override
+        public int skipTrailingWhitespace(int fromIndex, int toIndex) {
+            return ObfuscatorUtils.skipTrailingWhitespace(buffer, fromIndex - offset, toIndex - offset) + offset;
         }
 
         @Override

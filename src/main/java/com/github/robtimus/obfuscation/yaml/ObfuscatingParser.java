@@ -235,7 +235,7 @@ final class ObfuscatingParser implements Parser {
         int startEventStartIndex = startIndex(startEvent);
         int eventEndIndex = endIndex(endEvent);
         // don't include any trailing white space
-        eventEndIndex = skipTrailingWhitespace(startEventStartIndex, eventEndIndex);
+        eventEndIndex = source.skipTrailingWhitespace(startEventStartIndex, eventEndIndex);
 
         try {
             source.obfuscateText(startEventStartIndex, eventEndIndex, obfuscator, destination);
@@ -279,7 +279,7 @@ final class ObfuscatingParser implements Parser {
             // In snakeyaml-engine 2.1 that was replaced by method getValue()
             // To support both, use toString() that returns the anchor/value for both versions
             newStartIndex += 1 + anchor.get().toString().length();
-            newStartIndex = skipLeadingWhitespace(newStartIndex, eventEndIndex);
+            newStartIndex = source.skipLeadingWhitespace(newStartIndex, eventEndIndex);
             source.appendTo(eventStartIndex, newStartIndex, destination);
             return newStartIndex;
         }
@@ -300,23 +300,5 @@ final class ObfuscatingParser implements Parser {
 
     void appendRemainder() throws IOException {
         textIndex = source.appendRemainder(textIndex, textEnd, destination);
-    }
-
-    private int skipLeadingWhitespace(int fromIndex, int toIndex) {
-        for (int i = fromIndex; i < toIndex; i++) {
-            if (!Character.isWhitespace(source.charAt(i))) {
-                return i;
-            }
-        }
-        return toIndex;
-    }
-
-    private int skipTrailingWhitespace(int fromIndex, int toIndex) {
-        for (int i = toIndex; i > fromIndex; i--) {
-            if (!Character.isWhitespace(source.charAt(i - 1))) {
-                return i;
-            }
-        }
-        return fromIndex;
     }
 }
