@@ -13,16 +13,27 @@ To create a YAML obfuscator, simply create a builder, add properties to it, and 
             .withProperty("password", Obfuscator.fixedLength(3))
             .build();
 
-## Disabling obfuscation for mappings and/or sequences
+## Obfuscation for mappings and/or sequences
 
-By default, a JSON obfuscator will obfuscate all properties; for mapping and sequence properties, their contents in the document including opening and closing characters will be obfuscated. This can be turned on or off for all properties, or per property. For example:
+By default, a YAML obfuscator will obfuscate all properties; for mapping and sequence properties, their contents in the document including opening and closing characters will be obfuscated. This can be turned on or off for all properties, or per property. For example:
 
     Obfuscator obfuscator = JSONObfuscator.builder()
             .scalarsOnlyByDefault()
+            // .scalarsOnlyByDefault() is equivalent to:
+            // .forMappingsByDefault(ObfuscationMode.EXCLUDE)
+            // .forSequencesByDefault(ObfuscationMode.EXCLUDE)
             .withProperty("password", Obfuscator.fixedLength(3))
             .withProperty("complex", Obfuscator.fixedLength(3))
-                    .includeMappings() // override the default setting
+                    .forMappings(ObfuscationMode.OBFUSCATE) // override the default setting
+            .withProperty("arrayOfComplex", Obfuscator.fixedLength(3))
+                    .forSequences(ObfuscationMode.INHERIT_OVERRIDABLE) // override the default setting
             .build();
+
+The four possible modes for both mappings and sequences are:
+* `EXCLUDE`: don't obfuscate nested mappings or sequences, but instead traverse into them.
+* `OBFUSCATE`: obfuscate nested mappings and sequences completely (default).
+* `INHERIT`: don't obfuscate nested mappings or sequences, but use the obfuscator for all nested scalar properties.
+* `INHERIT_OVERRIDABLE`: don't obfuscate nested mappings or sequences, but use the obfuscator for all nested scalar properties. If a nested property has its own obfuscator defined this will be used instead.
 
 ## Handling malformed YAML
 

@@ -1,0 +1,87 @@
+string: "***"
+int: ***
+float: ***
+boolean: ***
+null: ***
+mapping:
+  string: '***'
+  int: ***
+  float: ***
+  boolean: ***
+  null: ***
+  nested:
+    - prop1: "mmm"
+      prop2: "mmm"
+flowMapping: { string: "***", int: ***, float: ***, boolean: ***, null: ***, nested: { prop1: "mmm", prop2: "mmm" } }
+sequence:
+  -
+    - "sss"
+    - "sss"
+  - {}
+flowSequence: [ [ "sss", "sss" ], {} ]
+notMatchedString: "123456"
+notMatchedInt: 123456
+notMatchedFloat: 1234.56
+notMatchedBoolean: true
+nonMatchedNull: null
+nonMatchedMapping:
+  notMatchedString: "123456"
+  notMatchedInt: 123456
+  notMatchedFloat: 1234.56
+  notMatchedBoolean: true
+  nonMatchedNull: null
+nested:
+  - string: "***"
+    int: ***
+    float: ***
+    boolean: ***
+    null: ***
+    mapping:
+      string: "***"
+      int: ***
+      float: ***
+      boolean: ***
+      nested:
+        - prop1: "mmm"
+          prop2: "mmm"
+    flowMapping: { string: "***", int: ***, float: ***, boolean: ***, null: ***, nested: { prop1: "mmm", prop2: "mmm" } }
+    sequence:
+      -
+        - "sss"
+        - "sss"
+      - {}
+    flowSequence: [ [ "sss", "sss" ], {} ]
+    notMatchedString: "123456"
+    notMatchedInt: 123456
+    notMatchedFloat: 1234.56
+    notMatchedBoolean: true
+    nonMatchedNull: null
+notObfuscated:
+  string: "***"
+  int: ***
+  float: ***
+  boolean: ***
+  null: ***
+  mapping:
+    - string: "***"
+      int: ***
+      float: ***
+      boolean: ***
+      nested:
+        - prop1: "mmm"
+          prop2: "mmm"
+          # comment
+  flowMapping: { string: "***", int: ***, float: ***, boolean: ***, null: ***, nested: { prop1: "mmm", prop2: "mmm" } }
+  sequence:
+    -
+      - "sss"
+      - "sss"
+    - {}
+  flowSequence: [ [ "sss", "sss" ], {} ]
+  notMatchedString: "123456"
+  notMatchedInt: 123456
+  notMatchedFloat: 1234.56
+  notMatchedBoolean: true
+  nonMatchedNull: null
+anchor: &A "***" # comment
+alias: *A # comment

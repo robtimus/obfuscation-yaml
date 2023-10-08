@@ -67,6 +67,7 @@ import com.github.robtimus.junit.support.extension.testlogger.Reload4jLoggerCont
 import com.github.robtimus.junit.support.extension.testlogger.TestLogger;
 import com.github.robtimus.obfuscation.Obfuscator;
 import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.Builder;
+import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ObfuscationMode;
 
 @SuppressWarnings("nls")
 @TestInstance(Lifecycle.PER_CLASS)
@@ -203,6 +204,28 @@ class YAMLObfuscatorTest {
             ObfuscatingScalarsOverridden() {
                 super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.scalar",
                         () -> createObfuscatorObfuscatingScalarsOnly(builder().allByDefault()));
+            }
+        }
+
+        @Nested
+        @DisplayName("obfuscating with INHERIT mode")
+        @TestInstance(Lifecycle.PER_CLASS)
+        class ObfuscatingInherited extends ObfuscatorTest {
+
+            ObfuscatingInherited() {
+                super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.inherited",
+                        () -> createObfuscatorWithObfuscatorMode(builder(), ObfuscationMode.INHERIT));
+            }
+        }
+
+        @Nested
+        @DisplayName("obfuscating with INHERITED_OVERRIDABLE mode")
+        @TestInstance(Lifecycle.PER_CLASS)
+        class ObfuscatingInheritedOverridable extends ObfuscatorTest {
+
+            ObfuscatingInheritedOverridable() {
+                super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.inherited-overridable",
+                        () -> createObfuscatorWithObfuscatorMode(builder(), ObfuscationMode.INHERIT_OVERRIDABLE));
             }
         }
 
@@ -525,10 +548,10 @@ class YAMLObfuscatorTest {
                 .withProperty("int", obfuscator)
                 .withProperty("float", obfuscator)
                 .withProperty("boolean", obfuscator)
-                .withProperty("mapping", obfuscator)
-                .withProperty("flowMapping", obfuscator)
-                .withProperty("sequence", obfuscator)
-                .withProperty("flowSequence", obfuscator)
+                .withProperty("mapping", fixedLength(3, 'm'))
+                .withProperty("flowMapping", fixedLength(3, 'm'))
+                .withProperty("sequence", fixedLength(3, 's'))
+                .withProperty("flowSequence", fixedLength(3, 's'))
                 .withProperty("null", obfuscator)
                 .withProperty("anchor", obfuscator)
                 .withProperty("alias", obfuscator)
@@ -544,10 +567,10 @@ class YAMLObfuscatorTest {
                 .withProperty("INT", obfuscator)
                 .withProperty("FLOAT", obfuscator)
                 .withProperty("BOOLEAN", obfuscator)
-                .withProperty("MAPPING", obfuscator)
-                .withProperty("FLOWMAPPING", obfuscator)
-                .withProperty("SEQUENCE", obfuscator)
-                .withProperty("FLOWSEQUENCE", obfuscator)
+                .withProperty("MAPPING", fixedLength(3, 'm'))
+                .withProperty("FLOWMAPPING", fixedLength(3, 'm'))
+                .withProperty("SEQUENCE", fixedLength(3, 's'))
+                .withProperty("FLOWSEQUENCE", fixedLength(3, 's'))
                 .withProperty("NULL", obfuscator)
                 .withProperty("ANCHOR", obfuscator)
                 .withProperty("ALIAS", obfuscator)
@@ -563,10 +586,10 @@ class YAMLObfuscatorTest {
                 .withProperty("int", obfuscator).all()
                 .withProperty("float", obfuscator).all()
                 .withProperty("boolean", obfuscator).all()
-                .withProperty("mapping", obfuscator).all()
-                .withProperty("flowMapping", obfuscator).all()
-                .withProperty("sequence", obfuscator).all()
-                .withProperty("flowSequence", obfuscator).all()
+                .withProperty("mapping", fixedLength(3, 'm')).all()
+                .withProperty("flowMapping", fixedLength(3, 'm')).all()
+                .withProperty("sequence", fixedLength(3, 's')).all()
+                .withProperty("flowSequence", fixedLength(3, 's')).all()
                 .withProperty("null", obfuscator).all()
                 .withProperty("anchor", obfuscator).all()
                 .withProperty("alias", obfuscator).all()
@@ -582,14 +605,35 @@ class YAMLObfuscatorTest {
                 .withProperty("int", obfuscator).scalarsOnly()
                 .withProperty("float", obfuscator).scalarsOnly()
                 .withProperty("boolean", obfuscator).scalarsOnly()
-                .withProperty("mapping", obfuscator).scalarsOnly()
-                .withProperty("flowMapping", obfuscator).scalarsOnly()
-                .withProperty("sequence", obfuscator).scalarsOnly()
-                .withProperty("flowSequence", obfuscator).scalarsOnly()
+                .withProperty("mapping", fixedLength(3, 'm')).scalarsOnly()
+                .withProperty("flowMapping", fixedLength(3, 'm')).scalarsOnly()
+                .withProperty("sequence", fixedLength(3, 's')).scalarsOnly()
+                .withProperty("flowSequence", fixedLength(3, 's')).scalarsOnly()
                 .withProperty("null", obfuscator).scalarsOnly()
                 .withProperty("anchor", obfuscator).scalarsOnly()
                 .withProperty("alias", obfuscator).scalarsOnly()
                 .withProperty("notObfuscated", none()).scalarsOnly()
+                .withMaxDocumentSize(10 * DEFAULT_PREFERRED_MAX_BUFFER_SIZE)
+                .build();
+    }
+
+    private static Obfuscator createObfuscatorWithObfuscatorMode(Builder builder, ObfuscationMode obfuscationMode) {
+        Obfuscator obfuscator = fixedLength(3);
+        return builder
+                .forMappingsByDefault(obfuscationMode)
+                .forSequencesByDefault(obfuscationMode)
+                .withProperty("string", obfuscator)
+                .withProperty("int", obfuscator)
+                .withProperty("float", obfuscator)
+                .withProperty("boolean", obfuscator)
+                .withProperty("mapping", fixedLength(3, 'm'))
+                .withProperty("flowMapping", fixedLength(3, 'm'))
+                .withProperty("sequence", fixedLength(3, 's'))
+                .withProperty("flowSequence", fixedLength(3, 's'))
+                .withProperty("null", obfuscator)
+                .withProperty("anchor", obfuscator)
+                .withProperty("alias", obfuscator)
+                .withProperty("notObfuscated", none())
                 .withMaxDocumentSize(10 * DEFAULT_PREFERRED_MAX_BUFFER_SIZE)
                 .build();
     }

@@ -4,11 +4,21 @@ float: ***
 boolean: ***
 null: ***
 mapping:
-  mmm
-flowMapping: mmm
+  string: 'mmm'
+  int: mmm
+  float: mmm
+  boolean: mmm
+  null: mmm
+  nested:
+    - prop1: "mmm"
+      prop2: "mmm"
+flowMapping: { string: "mmm", int: mmm, float: mmm, boolean: mmm, null: mmm, nested: { prop1: "mmm", prop2: "mmm" } }
 sequence:
-  sss
-flowSequence: sss
+  -
+    - "sss"
+    - "sss"
+  - {}
+flowSequence: [ [ "sss", "sss" ], {} ]
 notMatchedString: "123456"
 notMatchedInt: 123456
 notMatchedFloat: 1234.56
@@ -27,11 +37,20 @@ nested:
     boolean: ***
     null: ***
     mapping:
-      mmm
-    flowMapping: mmm
+      string: "mmm"
+      int: mmm
+      float: mmm
+      boolean: mmm
+      nested:
+        - prop1: "mmm"
+          prop2: "mmm"
+    flowMapping: { string: "mmm", int: mmm, float: mmm, boolean: mmm, null: mmm, nested: { prop1: "mmm", prop2: "mmm" } }
     sequence:
-      sss
-    flowSequence: sss
+      -
+        - "sss"
+        - "sss"
+      - {}
+    flowSequence: [ [ "sss", "sss" ], {} ]
     notMatchedString: "123456"
     notMatchedInt: 123456
     notMatchedFloat: 1234.56

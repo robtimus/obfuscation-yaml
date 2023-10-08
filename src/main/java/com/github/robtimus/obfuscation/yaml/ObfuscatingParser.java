@@ -23,7 +23,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Predicate;
+import java.util.function.Function;
 import org.snakeyaml.engine.v2.common.Anchor;
 import org.snakeyaml.engine.v2.common.ScalarStyle;
 import org.snakeyaml.engine.v2.events.Event;
@@ -31,6 +31,7 @@ import org.snakeyaml.engine.v2.events.Event.ID;
 import org.snakeyaml.engine.v2.events.ScalarEvent;
 import org.snakeyaml.engine.v2.parser.Parser;
 import com.github.robtimus.obfuscation.Obfuscator;
+import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ObfuscationMode;
 
 final class ObfuscatingParser implements Parser {
 
@@ -44,15 +45,11 @@ final class ObfuscatingParser implements Parser {
     private final int textEnd;
     private int textIndex;
 
-    private PropertyConfig currentProperty;
-    // Snakeyaml reports field names as Scalar events. The only difference with actual values is the current state.
+    private final Deque<ObfuscatedProperty> currentProperties = new ArrayDeque<>();
+    // SnakeYAML reports field names as Scalar events. The only difference with actual values is the current state.
     // We need to keep track of this state, more specifically whether or not the current structure is a mapping or no, and the current field name.
     private final Deque<Event.ID> structureStack = new ArrayDeque<>();
     private String currentFieldName;
-
-    // In case of obfuscated mappings and sequences, we need to remember the start event
-    private Event startEvent;
-    private int depth = 0;
 
     ObfuscatingParser(Parser parser, Source source, int start, int end, Appendable destination, Map<String, PropertyConfig> properties) {
         this.delegate = parser;
@@ -126,7 +123,7 @@ final class ObfuscatingParser implements Parser {
     }
 
     private void startMapping(Event event) {
-        startStructure(event, Event.ID.MappingStart, p -> p.obfuscateMappings);
+        startStructure(event, Event.ID.MappingStart, p -> p.forMappings);
     }
 
     private void endMapping(Event event) {
@@ -134,29 +131,33 @@ final class ObfuscatingParser implements Parser {
     }
 
     private void startSequence(Event event) {
-        startStructure(event, Event.ID.SequenceStart, p -> p.obfuscateSequences);
+        startStructure(event, Event.ID.SequenceStart, p -> p.forSequences);
     }
 
     private void endSequence(Event event) {
         endStructure(event, Event.ID.SequenceStart);
     }
 
-    private void startStructure(Event event, Event.ID startEventId, Predicate<PropertyConfig> doValidate) {
+    private void startStructure(Event event, Event.ID startEventId, Function<PropertyConfig, ObfuscationMode> getObfuscationMode) {
         startStructure(startEventId);
+        ObfuscatedProperty currentProperty = currentProperties.peekLast();
         if (currentProperty != null) {
-            if (depth == 0) {
-                if (doValidate.test(currentProperty)) {
+            if (currentProperty.depth == 0) {
+                // The start of the structure that's being obfuscated
+                ObfuscationMode obfuscationMode = getObfuscationMode.apply(currentProperty.config);
+                if (obfuscationMode == ObfuscationMode.EXCLUDE) {
+                    // There is an obfuscator for the structure property, but the obfuscation mode prohibits obfuscating it, so discard the property
+                    currentProperties.removeLast();
+                } else {
                     appendUntilEvent(event);
 
-                    startEvent = event;
-                    depth++;
-                } else {
-                    // There is an obfuscator for the structure property, but the obfuscation mode prohibits obfuscating it; reset the obfuscation
-                    currentProperty = null;
+                    currentProperty.startEvent = event;
+                    currentProperty.obfuscationMode = obfuscationMode;
+                    currentProperty.depth++;
                 }
-            } else if (startEvent.getEventId() == startEventId) {
+            } else if (currentProperty.hasStartEventId(startEventId)) {
                 // In a nested structure that's being obfuscated; do nothing
-                depth++;
+                currentProperty.depth++;
             }
             // else in a nested structure that's being obfuscated; do nothing
         }
@@ -165,16 +166,17 @@ final class ObfuscatingParser implements Parser {
 
     private void endStructure(Event event, Event.ID startEventId) {
         endStructure();
-        if (startEvent != null && startEvent.getEventId() == startEventId) {
-            depth--;
-            if (depth == 0) {
-                if (currentProperty.performObfuscation) {
-                    obfuscateUntilEvent(startEvent, event, currentProperty.obfuscator);
+        ObfuscatedProperty currentProperty = currentProperties.peekLast();
+        if (currentProperty != null && currentProperty.hasStartEventId(startEventId)) {
+            currentProperty.depth--;
+            if (currentProperty.depth == 0) {
+                if (currentProperty.obfuscateStructure()) {
+                    obfuscateUntilEvent(currentProperty.startEvent, event, currentProperty.config.obfuscator);
                 }
-                // else the obfuscator is Obfuscator.none(), which means we don't need to obfuscate
+                // else the obfuscator is Obfuscator.none(), which means we don't need to obfuscate,
+                // or the structure itself should not be obfuscated
 
-                currentProperty = null;
-                startEvent = null;
+                currentProperties.removeLast();
             }
             // else still in a nested structure that's being obfuscated
         }
@@ -197,14 +199,19 @@ final class ObfuscatingParser implements Parser {
     }
 
     private void fieldName(Event event) {
-        if (currentProperty == null) {
-            currentProperty = properties.get(currentFieldName);
+        ObfuscatedProperty currentProperty = currentProperties.peekLast();
+        if (currentProperty == null || currentProperty.allowsOverriding()) {
+            PropertyConfig config = properties.get(currentFieldName);
+            if (config != null) {
+                currentProperty = new ObfuscatedProperty(config);
+                currentProperties.addLast(currentProperty);
+            }
 
             if (source.needsTruncating()) {
                 appendUntilEvent(event);
                 source.truncate();
             }
-        } else if (!currentProperty.performObfuscation && source.needsTruncating()) {
+        } else if (!currentProperty.config.performObfuscation && source.needsTruncating()) {
             // in a nested object or array that's being obfuscated using Obfuscator.none(), which means we can just append data already
             appendUntilEvent(event);
             source.truncate();
@@ -213,10 +220,14 @@ final class ObfuscatingParser implements Parser {
     }
 
     private void scalarValue(Event event) {
-        if (currentProperty != null && depth == 0) {
+        ObfuscatedProperty currentProperty = currentProperties.peekLast();
+        if (currentProperty != null && currentProperty.obfuscateScalar()) {
             appendUntilEvent(event);
-            // obfuscate even if the obfuscator is Obfuscator.none(), as that will already append the original value
-            obfuscateEvent(event, currentProperty.obfuscator);
+            obfuscateEvent(event, currentProperty.config.obfuscator);
+
+            if (currentProperty.depth == 0) {
+                currentProperties.removeLast();
+            }
         }
         // else not obfuscating, or in a nested mapping or or sequence that's being obfuscated; do nothing
     }
@@ -300,5 +311,41 @@ final class ObfuscatingParser implements Parser {
 
     void appendRemainder() throws IOException {
         textIndex = source.appendRemainder(textIndex, textEnd, destination);
+    }
+
+    private static final class ObfuscatedProperty {
+
+        private final PropertyConfig config;
+        // In case of obfuscated mappings and sequences, we need to remember the start event
+        private Event startEvent;
+        private ObfuscationMode obfuscationMode;
+        private int depth = 0;
+
+        private ObfuscatedProperty(PropertyConfig config) {
+            this.config = config;
+        }
+
+        private boolean hasStartEventId(Event.ID startEventId) {
+            return startEvent != null && startEvent.getEventId() == startEventId;
+        }
+
+        private boolean allowsOverriding() {
+            // OBFUSCATE and INHERITED do not allow overriding
+            // No need to include EXCLUDE; if that occurs the ObfuscatedProperty is discarded
+            return obfuscationMode == ObfuscationMode.INHERIT_OVERRIDABLE;
+        }
+
+        private boolean obfuscateStructure() {
+            // Don't obfuscate the entire structure if Obfuscator.none() is used
+            return config.performObfuscation && obfuscationMode == ObfuscationMode.OBFUSCATE;
+        }
+
+        private boolean obfuscateScalar() {
+            // Don't obfuscate the scalar if Obfuscator.none() is used
+            // Obfuscate if depth == 0 (the property is for the scalar itself),
+            // or if the obfuscation mode is INHERITED or INHERITED_OVERRIDABLE (EXCLUDE is discarded)
+            return config.performObfuscation
+                    && (depth == 0 || obfuscationMode != ObfuscationMode.OBFUSCATE);
+        }
     }
 }

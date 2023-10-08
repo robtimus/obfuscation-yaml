@@ -4,11 +4,11 @@ float: ***
 boolean: ***
 null: ***
 mapping:
-  ***
-flowMapping: ***
+  mmm
+flowMapping: mmm
 sequence:
-  ***
-flowSequence: ***
+  sss
+flowSequence: sss
 notMatchedString: "123456"
 notMatchedInt: 123456
 notMatchedFloat: 1234.56

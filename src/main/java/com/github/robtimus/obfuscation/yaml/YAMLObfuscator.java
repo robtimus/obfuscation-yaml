@@ -40,6 +40,7 @@ import com.github.robtimus.obfuscation.support.CaseSensitivity;
 import com.github.robtimus.obfuscation.support.CountingReader;
 import com.github.robtimus.obfuscation.support.LimitAppendable;
 import com.github.robtimus.obfuscation.support.MapBuilder;
+import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ObfuscationMode;
 
 /**
  * An obfuscator that obfuscates YAML properties in {@link CharSequence CharSequences} or the contents of {@link Reader Readers}.
@@ -242,23 +243,27 @@ public final class YAMLObfuscator extends Obfuscator {
 
         /**
          * Indicates that by default properties will not be obfuscated if they are YAML mappings.
-         * This can be overridden per property using {@link PropertyConfigurer#includeMappings()}
+         * This method is an alias for {@link #forMappingsByDefault(ObfuscationMode)} in combination with {@link ObfuscationMode#EXCLUDE}.
          * <p>
          * Note that this will not change what will be obfuscated for any property that was already added.
          *
          * @return This object.
          */
-        Builder excludeMappingsByDefault();
+        default Builder excludeMappingsByDefault() {
+            return forMappingsByDefault(ObfuscationMode.EXCLUDE);
+        }
 
         /**
          * Indicates that by default properties will not be obfuscated if they are YAML sequences.
-         * This can be overridden per property using {@link PropertyConfigurer#includeSequences()}
+         * This method is an alias for {@link #forSequencesByDefault(ObfuscationMode)} in combination with {@link ObfuscationMode#EXCLUDE}.
          * <p>
          * Note that this will not change what will be obfuscated for any property that was already added.
          *
          * @return This object.
          */
-        Builder excludeSequencesByDefault();
+        default Builder excludeSequencesByDefault() {
+            return forSequencesByDefault(ObfuscationMode.EXCLUDE);
+        }
 
         /**
          * Indicates that by default properties will be obfuscated if they are YAML mappings or sequences (default).
@@ -275,23 +280,53 @@ public final class YAMLObfuscator extends Obfuscator {
 
         /**
          * Indicates that by default properties will be obfuscated if they are YAML mappings (default).
-         * This can be overridden per property using {@link PropertyConfigurer#excludeMappings()}
+         * This method is an alias for {@link #forMappingsByDefault(ObfuscationMode)} in combination with {@link ObfuscationMode#OBFUSCATE}.
          * <p>
          * Note that this will not change what will be obfuscated for any property that was already added.
          *
          * @return This object.
          */
-        Builder includeMappingsByDefault();
+        default Builder includeMappingsByDefault() {
+            return forMappingsByDefault(ObfuscationMode.OBFUSCATE);
+        }
 
         /**
          * Indicates that by default properties will be obfuscated if they are YAML sequences (default).
-         * This can be overridden per property using {@link PropertyConfigurer#excludeSequences()}
+         * This method is an alias for {@link #forSequencesByDefault(ObfuscationMode)} in combination with {@link ObfuscationMode#OBFUSCATE}.
          * <p>
          * Note that this will not change what will be obfuscated for any property that was already added.
          *
          * @return This object.
          */
-        Builder includeSequencesByDefault();
+        default Builder includeSequencesByDefault() {
+            return forSequencesByDefault(ObfuscationMode.OBFUSCATE);
+        }
+
+        /**
+         * Indicates how to handle properties if they are YAML mappings. The default is {@link ObfuscationMode#OBFUSCATE}.
+         * This can be overridden per property using {@link PropertyConfigurer#forMappings(ObfuscationMode)}
+         * <p>
+         * Note that this will not change what will be obfuscated for any property that was already added.
+         *
+         * @param obfuscationMode The obfuscation mode that determines how to handle properties.
+         * @return This object.
+         * @throws NullPointerException If the given obfuscation mode is {@code null}.
+         * @since 1.3
+         */
+        Builder forMappingsByDefault(ObfuscationMode obfuscationMode);
+
+        /**
+         * Indicates how to handle properties if they are YAML sequences. The default is {@link ObfuscationMode#OBFUSCATE}.
+         * This can be overridden per property using {@link PropertyConfigurer#forSequences(ObfuscationMode)}
+         * <p>
+         * Note that this will not change what will be obfuscated for any property that was already added.
+         *
+         * @param obfuscationMode The obfuscation mode that determines how to handle properties.
+         * @return This object.
+         * @throws NullPointerException If the given obfuscation mode is {@code null}.
+         * @since 1.3
+         */
+        Builder forSequencesByDefault(ObfuscationMode obfuscationMode);
 
         /**
          * Sets the maximum size of YAML documents. If documents are larger they will be regarded as malformed YAML. The default is 3MB.
@@ -355,7 +390,7 @@ public final class YAMLObfuscator extends Obfuscator {
          * Indicates that properties with the current name will not be obfuscated if they are YAML mappings or sequences.
          * This method is shorthand for calling both {@link #excludeMappings()} and {@link #excludeSequences()}.
          *
-         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         * @return This object.
          */
         default PropertyConfigurer scalarsOnly() {
             return excludeMappings()
@@ -364,23 +399,29 @@ public final class YAMLObfuscator extends Obfuscator {
 
         /**
          * Indicates that properties with the current name will not be obfuscated if they are YAML mappings.
+         * This method is an alias for {@link #forMappings(ObfuscationMode)} in combination with {@link ObfuscationMode#EXCLUDE}.
          *
-         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         * @return This object.
          */
-        PropertyConfigurer excludeMappings();
+        default PropertyConfigurer excludeMappings() {
+            return forMappings(ObfuscationMode.EXCLUDE);
+        }
 
         /**
          * Indicates that properties with the current name will not be obfuscated if they are YAML sequences.
+         * This method is an alias for {@link #forSequences(ObfuscationMode)} in combination with {@link ObfuscationMode#EXCLUDE}.
          *
-         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         * @return This object.
          */
-        PropertyConfigurer excludeSequences();
+        default PropertyConfigurer excludeSequences() {
+            return forSequences(ObfuscationMode.EXCLUDE);
+        }
 
         /**
          * Indicates that properties with the current name will be obfuscated if they are YAML mappings or sequences.
          * This method is shorthand for calling both {@link #includeMappings()} and {@link #includeSequences()}.
          *
-         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         * @return This object.
          */
         default PropertyConfigurer all() {
             return includeMappings()
@@ -389,17 +430,66 @@ public final class YAMLObfuscator extends Obfuscator {
 
         /**
          * Indicates that properties with the current name will be obfuscated if they are YAML mappings.
+         * This method is an alias for {@link #forMappings(ObfuscationMode)} in combination with {@link ObfuscationMode#OBFUSCATE}.
          *
-         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         * @return This object.
          */
-        PropertyConfigurer includeMappings();
+        default PropertyConfigurer includeMappings() {
+            return forMappings(ObfuscationMode.OBFUSCATE);
+        }
 
         /**
          * Indicates that properties with the current name will be obfuscated if they are YAML sequences.
+         * This method is an alias for {@link #forSequences(ObfuscationMode)} in combination with {@link ObfuscationMode#OBFUSCATE}.
          *
-         * @return An object that can be used to configure the property, or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         * @return This object.
          */
-        PropertyConfigurer includeSequences();
+        default PropertyConfigurer includeSequences() {
+            return forSequences(ObfuscationMode.OBFUSCATE);
+        }
+
+        /**
+         * Indicates how to handle properties if they are YAML mappings. The default is {@link ObfuscationMode#OBFUSCATE}.
+         *
+         * @param obfuscationMode The obfuscation mode that determines how to handle properties.
+         * @return This object.
+         * @throws NullPointerException If the given obfuscation mode is {@code null}.
+         * @since 1.3
+         */
+        PropertyConfigurer forMappings(ObfuscationMode obfuscationMode);
+
+        /**
+         * Indicates how to handle properties if they are YAML sequences. The default is {@link ObfuscationMode#OBFUSCATE}.
+         *
+         * @param obfuscationMode The obfuscation mode that determines how to handle properties.
+         * @return This object.
+         * @throws NullPointerException If the given obfuscation mode is {@code null}.
+         * @since 1.3
+         */
+        PropertyConfigurer forSequences(ObfuscationMode obfuscationMode);
+
+        /**
+         * The possible ways to deal with nested mappings and sequences.
+         *
+         * @author Rob Spoor
+         * @since 1.3
+         */
+        enum ObfuscationMode {
+            /** Don't obfuscate nested mappings or sequences, but instead traverse into them. **/
+            EXCLUDE,
+
+            /** Obfuscate nested mappings and sequences completely. **/
+            OBFUSCATE,
+
+            /** Don't obfuscate nested mappings or sequences, but use the obfuscator for all nested scalar properties. **/
+            INHERIT,
+
+            /**
+             * Don't obfuscate nested mappings or sequences, but use the obfuscator for all nested scalar properties.
+             * If a nested property has its own obfuscator defined this will be used instead.
+             **/
+            INHERIT_OVERRIDABLE,
+        }
     }
 
     /**
@@ -416,8 +506,7 @@ public final class YAMLObfuscator extends Obfuscator {
          * Use {@code null} to omit the indicator.
          *
          * @param pattern The pattern to use as indicator.
-         * @return An object that can be used to configure the handling when the obfuscated result exceeds a pre-defined limit,
-         *         or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         * @return This object.
          */
         LimitConfigurer withTruncatedIndicator(String pattern);
     }
@@ -433,15 +522,15 @@ public final class YAMLObfuscator extends Obfuscator {
         private String truncatedIndicator;
 
         // default settings
-        private boolean obfuscateMappingsByDefault;
-        private boolean obfuscateSequencesByDefault;
+        private ObfuscationMode forMappingsByDefault;
+        private ObfuscationMode forSequencesByDefault;
 
         // per property settings
         private String property;
         private Obfuscator obfuscator;
         private CaseSensitivity caseSensitivity;
-        private boolean obfuscateMappings;
-        private boolean obfuscateSequences;
+        private ObfuscationMode forMappings;
+        private ObfuscationMode forSequences;
 
         private ObfuscatorBuilder() {
             properties = new MapBuilder<>();
@@ -452,8 +541,8 @@ public final class YAMLObfuscator extends Obfuscator {
             limit = Long.MAX_VALUE;
             truncatedIndicator = "... (total: %d)"; //$NON-NLS-1$
 
-            obfuscateMappingsByDefault = true;
-            obfuscateSequencesByDefault = true;
+            forMappingsByDefault = ObfuscationMode.OBFUSCATE;
+            forSequencesByDefault = ObfuscationMode.OBFUSCATE;
         }
 
         @Override
@@ -465,8 +554,8 @@ public final class YAMLObfuscator extends Obfuscator {
             this.property = property;
             this.obfuscator = obfuscator;
             this.caseSensitivity = null;
-            this.obfuscateMappings = obfuscateMappingsByDefault;
-            this.obfuscateSequences = obfuscateSequencesByDefault;
+            this.forMappings = forMappingsByDefault;
+            this.forSequences = forSequencesByDefault;
 
             return this;
         }
@@ -480,8 +569,8 @@ public final class YAMLObfuscator extends Obfuscator {
             this.property = property;
             this.obfuscator = obfuscator;
             this.caseSensitivity = caseSensitivity;
-            this.obfuscateMappings = obfuscateMappingsByDefault;
-            this.obfuscateSequences = obfuscateSequencesByDefault;
+            this.forMappings = forMappingsByDefault;
+            this.forSequences = forSequencesByDefault;
 
             return this;
         }
@@ -499,50 +588,26 @@ public final class YAMLObfuscator extends Obfuscator {
         }
 
         @Override
-        public Builder excludeMappingsByDefault() {
-            obfuscateMappingsByDefault = false;
+        public Builder forMappingsByDefault(ObfuscationMode obfuscationMode) {
+            forMappingsByDefault = Objects.requireNonNull(obfuscationMode);
             return this;
         }
 
         @Override
-        public Builder excludeSequencesByDefault() {
-            obfuscateSequencesByDefault = false;
+        public Builder forSequencesByDefault(ObfuscationMode obfuscationMode) {
+            forSequencesByDefault = Objects.requireNonNull(obfuscationMode);
             return this;
         }
 
         @Override
-        public Builder includeMappingsByDefault() {
-            obfuscateMappingsByDefault = true;
+        public PropertyConfigurer forMappings(ObfuscationMode obfuscationMode) {
+            forMappings = Objects.requireNonNull(obfuscationMode);
             return this;
         }
 
         @Override
-        public Builder includeSequencesByDefault() {
-            obfuscateSequencesByDefault = true;
-            return this;
-        }
-
-        @Override
-        public PropertyConfigurer excludeMappings() {
-            obfuscateMappings = false;
-            return this;
-        }
-
-        @Override
-        public PropertyConfigurer excludeSequences() {
-            obfuscateSequences = false;
-            return this;
-        }
-
-        @Override
-        public PropertyConfigurer includeMappings() {
-            obfuscateMappings = true;
-            return this;
-        }
-
-        @Override
-        public PropertyConfigurer includeSequences() {
-            obfuscateSequences = true;
+        public PropertyConfigurer forSequences(ObfuscationMode obfuscationMode) {
+            forSequences = Objects.requireNonNull(obfuscationMode);
             return this;
         }
 
@@ -582,7 +647,7 @@ public final class YAMLObfuscator extends Obfuscator {
 
         private void addLastProperty() {
             if (property != null) {
-                PropertyConfig propertyConfig = new PropertyConfig(obfuscator, obfuscateMappings, obfuscateSequences);
+                PropertyConfig propertyConfig = new PropertyConfig(obfuscator, forMappings, forSequences);
                 if (caseSensitivity != null) {
                     properties.withEntry(property, propertyConfig, caseSensitivity);
                 } else {
@@ -593,8 +658,8 @@ public final class YAMLObfuscator extends Obfuscator {
             property = null;
             obfuscator = null;
             caseSensitivity = null;
-            obfuscateMappings = obfuscateMappingsByDefault;
-            obfuscateSequences = obfuscateSequencesByDefault;
+            forMappings = forMappingsByDefault;
+            forSequences = forSequencesByDefault;
         }
 
         @Override

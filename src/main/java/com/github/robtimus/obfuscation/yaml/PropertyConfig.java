@@ -19,18 +19,19 @@ package com.github.robtimus.obfuscation.yaml;
 
 import java.util.Objects;
 import com.github.robtimus.obfuscation.Obfuscator;
+import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ObfuscationMode;
 
 final class PropertyConfig {
 
     final Obfuscator obfuscator;
-    final boolean obfuscateMappings;
-    final boolean obfuscateSequences;
+    final ObfuscationMode forMappings;
+    final ObfuscationMode forSequences;
     final boolean performObfuscation;
 
-    PropertyConfig(Obfuscator obfuscator, boolean obfuscateMappings, boolean obfuscateSequences) {
+    PropertyConfig(Obfuscator obfuscator, ObfuscationMode forMappings, ObfuscationMode forSequences) {
         this.obfuscator = Objects.requireNonNull(obfuscator);
-        this.obfuscateMappings = obfuscateMappings;
-        this.obfuscateSequences = obfuscateSequences;
+        this.forMappings = Objects.requireNonNull(forMappings);
+        this.forSequences = Objects.requireNonNull(forSequences);
         this.performObfuscation = !obfuscator.equals(Obfuscator.none());
     }
 
@@ -44,21 +45,21 @@ final class PropertyConfig {
         }
         PropertyConfig other = (PropertyConfig) o;
         return obfuscator.equals(other.obfuscator)
-                && obfuscateMappings == other.obfuscateMappings
-                && obfuscateSequences == other.obfuscateSequences;
+                && forMappings == other.forMappings
+                && forSequences == other.forSequences;
     }
 
     @Override
     public int hashCode() {
-        return obfuscator.hashCode() ^ Boolean.hashCode(obfuscateMappings) ^ Boolean.hashCode(obfuscateSequences);
+        return obfuscator.hashCode() ^ forMappings.hashCode() ^ forSequences.hashCode();
     }
 
     @Override
     @SuppressWarnings("nls")
     public String toString() {
         return "[obfuscator=" + obfuscator
-                + ",obfuscateMappings=" + obfuscateMappings
-                + ",obfuscateSequences=" + obfuscateSequences
+                + ",forMappings=" + forMappings
+                + ",forSequences=" + forSequences
                 + "]";
     }
 }
