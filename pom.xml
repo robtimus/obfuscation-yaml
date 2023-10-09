@@ -27,7 +27,7 @@
   </parent>
 
   <artifactId>obfuscation-yaml</artifactId>
-  <version>1.3</version>
+  <version>1.4-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>obfuscation-yaml</name>
@@ -52,7 +52,7 @@
   <scm>
     <connection>scm:git:git@github.com:robtimus/obfuscation-yaml.git</connection>
     <developerConnection>scm:git:git@github.com:robtimus/obfuscation-yaml.git</developerConnection>
-    <tag>1.3</tag>
+    <tag>HEAD</tag>
     <url>https://github.com/robtimus/obfuscation-yaml</url>
   </scm>
 
