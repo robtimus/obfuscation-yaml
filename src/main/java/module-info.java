@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+/**
+ * Provides functionality for obfuscating YAML.
+ */
 module com.github.robtimus.obfuscation.yaml {
     requires transitive com.github.robtimus.obfuscation;
     requires org.snakeyaml.engine.v2;
