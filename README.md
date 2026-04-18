@@ -3,7 +3,6 @@
 [![Build Status](https://github.com/robtimus/obfuscation-yaml/actions/workflows/build.yml/badge.svg)](https://github.com/robtimus/obfuscation-yaml/actions/workflows/build.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Aobfuscation-yaml&metric=alert_status)](https://sonarcloud.io/summary/overall?id=com.github.robtimus%3Aobfuscation-yaml)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Aobfuscation-yaml&metric=coverage)](https://sonarcloud.io/summary/overall?id=com.github.robtimus%3Aobfuscation-yaml)
-[![Known Vulnerabilities](https://snyk.io/test/github/robtimus/obfuscation-yaml/badge.svg)](https://snyk.io/test/github/robtimus/obfuscation-yaml)
 
 Provides functionality for obfuscating YAML documents. This can be useful for logging such documents, where sensitive content should not be logged as-is.
 
