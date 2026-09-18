@@ -1,0 +1,24 @@
+- type: string
+  value: "string\"int"
+- type: int
+  value: 123456
+- type: bigInt
+  value: 123456789012345678901234567890
+- type: float
+  value: 1234.56
+- type: booleanTrue
+  value: true
+- type: booleanFalse
+  value: false
+- type: null
+  value: null
+- type: mapping
+  value:
+    prop1: "1"
+    prop2: "2"
+- type: sequence
+  value:
+    - "string"
+    - 1234
+    - id: 1
+    - [true, false]
