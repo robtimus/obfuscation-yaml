@@ -1,0 +1,20 @@
+- type: string
+  value: "<scalar>"
+- type: int
+  value: <scalar>
+- type: bigInt
+  value: <scalar>
+- type: float
+  value: <scalar>
+- type: booleanTrue
+  value: <scalar>
+- type: booleanFalse
+  value: <scalar>
+- type: null
+  value: <scalar>
+- type: mapping
+  value:
+    <mapping>
+- type: sequence
+  value:
+    <sequence>

@@ -19,7 +19,7 @@ package com.github.robtimus.obfuscation.yaml;
 
 import java.util.Objects;
 import com.github.robtimus.obfuscation.Obfuscator;
-import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ObfuscationMode;
+import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.ObfuscationMode;
 
 final class PropertyConfig {
 
@@ -52,14 +52,5 @@ final class PropertyConfig {
     @Override
     public int hashCode() {
         return obfuscator.hashCode() ^ forMappings.hashCode() ^ forSequences.hashCode();
-    }
-
-    @Override
-    @SuppressWarnings("nls")
-    public String toString() {
-        return "[obfuscator=" + obfuscator
-                + ",forMappings=" + forMappings
-                + ",forSequences=" + forSequences
-                + "]";
     }
 }

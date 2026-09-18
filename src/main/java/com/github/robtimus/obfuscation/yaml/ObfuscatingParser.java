@@ -20,6 +20,7 @@ package com.github.robtimus.obfuscation.yaml;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
 import java.util.Optional;
@@ -31,7 +32,8 @@ import org.snakeyaml.engine.v2.events.Event.ID;
 import org.snakeyaml.engine.v2.events.ScalarEvent;
 import org.snakeyaml.engine.v2.parser.Parser;
 import com.github.robtimus.obfuscation.Obfuscator;
-import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ObfuscationMode;
+import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.ObfuscationMode;
+import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.ValueType;
 
 final class ObfuscatingParser implements Parser {
 
@@ -39,11 +41,18 @@ final class ObfuscatingParser implements Parser {
     private final Source source;
     private final Appendable destination;
 
-    private final Map<String, PropertyConfig> properties;
+    private final Map<ValueType, Map<String, PropertyConfig>> properties;
 
     private final int textOffset;
     private final int textEnd;
     private int textIndex;
+
+    /*
+     * To perform obfuscator lookups based not just on property names but also value types, the lookup needs to be delayed to when a new value is
+     * encountered. This should only be done directly after a property name. If it is done for every value then it will also be done for array
+     * elements. This flag is set to true only from fieldName(), and reset to false after performing a lookup.
+     */
+    private boolean needsObfuscatorLookup;
 
     private final Deque<ObfuscatedProperty> currentProperties = new ArrayDeque<>();
     // SnakeYAML reports field names as Scalar events. The only difference with actual values is the current state.
@@ -51,7 +60,9 @@ final class ObfuscatingParser implements Parser {
     private final Deque<Event.ID> structureStack = new ArrayDeque<>();
     private String currentFieldName;
 
-    ObfuscatingParser(Parser parser, Source source, int start, int end, Appendable destination, Map<String, PropertyConfig> properties) {
+    ObfuscatingParser(Parser parser, Source source, int start, int end, Appendable destination,
+                      Map<ValueType, Map<String, PropertyConfig>> properties) {
+
         this.delegate = parser;
         this.source = source;
         this.textOffset = start;
@@ -121,7 +132,7 @@ final class ObfuscatingParser implements Parser {
     }
 
     private void startMapping(Event event) {
-        startStructure(event, Event.ID.MappingStart, p -> p.forMappings);
+        startStructure(event, Event.ID.MappingStart, ValueType.MAPPING, p -> p.forMappings);
     }
 
     private void endMapping(Event event) {
@@ -129,30 +140,28 @@ final class ObfuscatingParser implements Parser {
     }
 
     private void startSequence(Event event) {
-        startStructure(event, Event.ID.SequenceStart, p -> p.forSequences);
+        startStructure(event, Event.ID.SequenceStart, ValueType.SEQUENCE, p -> p.forSequences);
     }
 
     private void endSequence(Event event) {
         endStructure(event, Event.ID.SequenceStart);
     }
 
-    private void startStructure(Event event, Event.ID startEventId, Function<PropertyConfig, ObfuscationMode> getObfuscationMode) {
+    private void startStructure(Event event, Event.ID startEventId, ValueType valueType,
+                                Function<PropertyConfig, ObfuscationMode> getObfuscationMode) {
+
+        lookupConfigIfNeeded(valueType);
         startStructure(startEventId);
         ObfuscatedProperty currentProperty = currentProperties.peekLast();
         if (currentProperty != null) {
             if (currentProperty.depth == 0) {
                 // The start of the structure that's being obfuscated
                 ObfuscationMode obfuscationMode = getObfuscationMode.apply(currentProperty.config);
-                if (obfuscationMode == ObfuscationMode.EXCLUDE) {
-                    // There is an obfuscator for the structure property, but the obfuscation mode prohibits obfuscating it, so discard the property
-                    currentProperties.removeLast();
-                } else {
-                    appendUntilEvent(event);
+                appendUntilEvent(event);
 
-                    currentProperty.startEvent = event;
-                    currentProperty.obfuscationMode = obfuscationMode;
-                    currentProperty.depth++;
-                }
+                currentProperty.startEvent = event;
+                currentProperty.obfuscationMode = obfuscationMode;
+                currentProperty.depth++;
             } else if (currentProperty.hasStartEventId(startEventId)) {
                 // In a nested structure that's being obfuscated; do nothing
                 currentProperty.depth++;
@@ -191,20 +200,15 @@ final class ObfuscatingParser implements Parser {
             currentFieldName = ((ScalarEvent) event).getValue();
             fieldName(event);
         } else {
-            currentFieldName = null;
             scalarValue(event);
+            currentFieldName = null;
         }
     }
 
     private void fieldName(Event event) {
         ObfuscatedProperty currentProperty = currentProperties.peekLast();
         if (currentProperty == null || currentProperty.allowsOverriding()) {
-            PropertyConfig config = properties.get(currentFieldName);
-            if (config != null) {
-                currentProperty = new ObfuscatedProperty(config);
-                currentProperties.addLast(currentProperty);
-            }
-
+            needsObfuscatorLookup = true;
             if (source.needsTruncating()) {
                 appendUntilEvent(event);
                 source.truncate();
@@ -218,6 +222,7 @@ final class ObfuscatingParser implements Parser {
     }
 
     private void scalarValue(Event event) {
+        lookupConfigIfNeeded(ValueType.SCALAR);
         ObfuscatedProperty currentProperty = currentProperties.peekLast();
         if (currentProperty != null && currentProperty.obfuscateScalar()) {
             appendUntilEvent(event);
@@ -228,6 +233,17 @@ final class ObfuscatingParser implements Parser {
             }
         }
         // else not obfuscating, or in a nested mapping or or sequence that's being obfuscated; do nothing
+    }
+
+    private void lookupConfigIfNeeded(ValueType valueType) {
+        if (needsObfuscatorLookup) {
+            PropertyConfig config = properties.getOrDefault(valueType, Collections.emptyMap()).get(currentFieldName);
+            if (config != null) {
+                ObfuscatedProperty currentProperty = new ObfuscatedProperty(config);
+                currentProperties.addLast(currentProperty);
+            }
+            needsObfuscatorLookup = false;
+        }
     }
 
     private void appendUntilEvent(Event event) {
@@ -329,7 +345,6 @@ final class ObfuscatingParser implements Parser {
 
         private boolean allowsOverriding() {
             // OBFUSCATE and INHERITED do not allow overriding
-            // No need to include EXCLUDE; if that occurs the ObfuscatedProperty is discarded
             return obfuscationMode == ObfuscationMode.INHERIT_OVERRIDABLE;
         }
 
@@ -341,7 +356,7 @@ final class ObfuscatingParser implements Parser {
         private boolean obfuscateScalar() {
             // Don't obfuscate the scalar if Obfuscator.none() is used
             // Obfuscate if depth == 0 (the property is for the scalar itself),
-            // or if the obfuscation mode is INHERITED or INHERITED_OVERRIDABLE (EXCLUDE is discarded)
+            // or if the obfuscation mode is INHERITED or INHERITED_OVERRIDABLE
             return config.performObfuscation
                     && (depth == 0 || obfuscationMode != ObfuscationMode.OBFUSCATE);
         }

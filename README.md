@@ -21,19 +21,18 @@ By default, a YAML obfuscator will obfuscate all properties; for mapping and seq
 ```java
 Obfuscator obfuscator = JSONObfuscator.builder()
         .scalarsOnlyByDefault()
-        // .scalarsOnlyByDefault() is equivalent to:
-        // .forMappingsByDefault(ObfuscationMode.EXCLUDE)
-        // .forSequencesByDefault(ObfuscationMode.EXCLUDE)
+        .withValueTypesByDefault(ValueType.SCALAR)
         .withProperty("password", Obfuscator.fixedLength(3))
-        .withProperty("complex", Obfuscator.fixedLength(3))
-                .forMappings(ObfuscationMode.OBFUSCATE) // override the default setting
+        .withProperty("complex", Obfuscator.fixedLength(3), property -> property
+                .withValueTypes(ValueType.MAPPING)     // override the default setting
+                .forMappings(ObfuscationMode.INHERIT)) // override the default setting
         .withProperty("arrayOfComplex", Obfuscator.fixedLength(3))
+                .withValueTypes(ValueType.SEQUENCE)                // override the default setting
                 .forSequences(ObfuscationMode.INHERIT_OVERRIDABLE) // override the default setting
         .build();
 ```
 
-The four possible modes for both mappings and sequences are:
-* `EXCLUDE`: don't obfuscate nested mappings or sequences, but instead traverse into them.
+The three possible modes for both mappings and sequences are:
 * `OBFUSCATE`: obfuscate nested mappings and sequences completely (default).
 * `INHERIT`: don't obfuscate nested mappings or sequences, but use the obfuscator for all nested scalar properties.
 * `INHERIT_OVERRIDABLE`: don't obfuscate nested mappings or sequences, but use the obfuscator for all nested scalar properties. If a nested property has its own obfuscator defined this will be used instead.
