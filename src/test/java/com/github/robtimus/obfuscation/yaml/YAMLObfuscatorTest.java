@@ -49,7 +49,6 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Level;
 import org.apache.log4j.spi.LoggingEvent;
@@ -291,7 +290,7 @@ class YAMLObfuscatorTest {
             }
         }
 
-        private class TruncatedYAMLTest extends ObfuscatorTest {
+        private abstract static class TruncatedYAMLTest extends ObfuscatorTest {
 
             TruncatedYAMLTest(String expectedResource, boolean includeWarning) {
                 super("YAMLObfuscator.input.truncated", expectedResource, () -> createObfuscator(includeWarning));
@@ -496,7 +495,7 @@ class YAMLObfuscatorTest {
             List<String> traceMessages = loggingEvents.getAllValues().stream()
                     .filter(event -> event.getLevel() == Level.TRACE)
                     .map(LoggingEvent::getRenderedMessage)
-                    .collect(Collectors.toList());
+                    .toList();
 
             assertThat(traceMessages, hasSize(0));
         }
@@ -509,7 +508,7 @@ class YAMLObfuscatorTest {
             List<String> traceMessages = loggingEvents.getAllValues().stream()
                     .filter(event -> event.getLevel() == Level.TRACE)
                     .map(LoggingEvent::getRenderedMessage)
-                    .collect(Collectors.toList());
+                    .toList();
 
             assertThat(traceMessages, hasSize(greaterThanOrEqualTo(1)));
 
@@ -517,7 +516,7 @@ class YAMLObfuscatorTest {
             int expectedMax = (int) (Source.OfReader.PREFERRED_MAX_BUFFER_SIZE * 1.05D);
             List<Integer> sizes = traceMessages.stream()
                     .map(message -> extractSize(message, pattern))
-                    .collect(Collectors.toList());
+                    .toList();
             assertThat(sizes, everyItem(lessThanOrEqualTo(expectedMax)));
         }
 
