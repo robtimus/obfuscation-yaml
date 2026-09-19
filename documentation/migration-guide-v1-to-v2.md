@@ -1,21 +1,21 @@
 # Migrating from version 1.x to 2.0
 
-## Builder
+## YAMLObfuscator.Builder
 
-`JSONObfuscator.Builder` is no longer an interface but instead a final class. If you are creating mocks or implementing it directly you need to use actual instances created through `JSONObfucsator.builder()`.
+`YAMLObfuscator.Builder` is no longer an interface but instead a final class. If you are creating mocks or implementing it directly you need to use actual instances created through `YAMLObfucsator.builder()`.
 
 ### withProperty
 
-`JSONObfuscator.Builder.withProperty` no longer returns a `PropertyConfigurer`. Instead it is overloaded to take a `Consumer<PropertyConfigurer>`. If you called any `PropertyConfigurer` methods you need to provide a lambda instead. For example:
+`YAMLObfuscator.Builder.withProperty` no longer returns a `PropertyConfigurer`. Instead it is overloaded to take a `Consumer<PropertyConfigurer>`. If you called any `PropertyConfigurer` methods you need to provide a lambda instead. For example:
 
 ```java
 /* old:
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator)
                 .forMappings(ObfuscationMode.INHERIT)
                 .forSequences(ObfuscationMode.INHERIT)
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, property -> property
                 .forMappings(ObfuscationMode.INHERIT)
                 .forSequences(ObfuscationMode.INHERIT))
@@ -23,77 +23,77 @@ JSONObfuscator.builder()
 
 #### Case sensitivity
 
-`JSONObfuscator.withProperty` no longer accepts a `CaseSensitivity` argument. You need to use new `PropertyConfigurer` methods `caseSensitive()` and `caseInsensitive()` instead. For example:
+`YAMLObfuscator.Builder.withProperty` no longer accepts a `CaseSensitivity` argument. You need to use new `PropertyConfigurer` methods `caseSensitive()` and `caseInsensitive()` instead. For example:
 
 ```java
 /* old:
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, CaseSensitivity.CASE_INSENSITIVE)
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, PropertyConfigurer::caseInsensitive)
 ```
 
 ### scalarsOnlyByDefault, excludeMappingsByDefault, excludeSequencesByDefault, all
 
-`JSONObfuscator.scalarsOnlyByDefault`, `JSONObfuscator.excludeMappingsByDefault`, `JSONObfuscator.excludeSequencesByDefault` and `JSONObfuscator.allByDefault` have been removed. You need to use new method `withValueTypesByDefault` instead. For example:
+`YAMLObfuscator.scalarsOnlyByDefault`, `YAMLObfuscator.excludeMappingsByDefault`, `YAMLObfuscator.excludeSequencesByDefault` and `YAMLObfuscator.allByDefault` have been removed. You need to use new method `withValueTypesByDefault` instead. For example:
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .scalarsOnlyByDefault()
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withValueTypesByDefault(ValueType.SCALAR)
 ```
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .excludeMappingsByDefault()
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withValueTypesByDefault(ValueType.SCALAR, ValueType.SEQUENCE)
 ```
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .excludeSequencesByDefault()
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withValueTypesByDefault(ValueType.SCALAR, ValueType.MAPPING)
 ```
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .excludeMappingsByDefault()
         .excludeSequencesByDefault()
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withValueTypesByDefault(ValueType.SCALAR)
 ```
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .allByDefault()
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withValueTypesByDefault(ValueType.ALL)
 ```
 
 ### includeMappingsByDefault, includeSequencesByDefault
 
-`JSONObfuscator.includeMappingsByDefault` and `JSONObfuscator.includeSequencesByDefault` have been removed. You need to combine methods `forMappingsByDefault` and/or `forSequencesByDefault` with new method `withValueTypesByDefault` instead. For example:
+`YAMLObfuscator.includeMappingsByDefault` and `YAMLObfuscator.includeSequencesByDefault` have been removed. You need to combine methods `forMappingsByDefault` and/or `forSequencesByDefault` with new method `withValueTypesByDefault` instead. For example:
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .includeMappingsByDefault()
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withValueTypesByDefault(ValueType.SCALAR, ValueType.MAPPING)
         // or .withValueTypesByDefault(ValueType.ALL) to also include sequences
         .forMappingsByDefault(ObfuscationMode.OBFUSCATE)
@@ -101,10 +101,10 @@ JSONObfuscator.builder()
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .includeSequencesByDefault()
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withValueTypesByDefault(ValueType.SCALAR, ValueType.SEQUENCE)
         // or .withValueTypesByDefault(ValueType.ALL) to also include mappings
         .forSequencesByDefault(ObfuscationMode.OBFUSCATE)
@@ -112,11 +112,11 @@ JSONObfuscator.builder()
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .includeMappingsByDefault()
         .includeSequencesByDefault()
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withValueTypesByDefault(ValueType.ALL)
         .forSequencesByDefault(ObfuscationMode.OBFUSCATE)
 ```
@@ -125,94 +125,94 @@ Note that the defaults already use `ValueType.ALL` and `ObfuscationMode.OBFUSCAT
 
 ### limitTo
 
-`JSONObfuscator.Builder.limitTo` no longer returns a `LimitConfigurer`. Instead it is overloaded to take a `Consumer<LimitConfigurer>`. If you called any `LimitConfigurer` methods you need to provide a lambda instead. For example:
+`YAMLObfuscator.Builder.limitTo` no longer returns a `LimitConfigurer`. Instead it is overloaded to take a `Consumer<LimitConfigurer>`. If you called any `LimitConfigurer` methods you need to provide a lambda instead. For example:
 
 ```java
 /* old:
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .limitTo(1024)
                 .withTruncatedIndicator("<truncated>")
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .limitTo(1024, limit -> limit
                 .withTruncatedIndicator("<truncated>"))
 ```
 
-## PropertyConfigurer
+## YAMLObfuscator.PropertyConfigurer
 
-`JSONObfuscator.PropertyConfigurer` is no longer an interface but instead a final class. If you are creating mocks or implementing it directly you need to use actual instances passed to the `Consumer` argument of `JSONObfuscator.Builder.withProperty`.
+`YAMLObfuscator.PropertyConfigurer` is no longer an interface but instead a final class. If you are creating mocks or implementing it directly you need to use actual instances passed to the `Consumer` argument of `YAMLObfuscator.Builder.withProperty`.
 
 ### scalarsOnly, excludeMappings, excludeSequences, all
 
-`JSONObfuscator.PropertyConfigurer.scalarsOnly`, `JSONObfuscator.PropertyConfigurer.excludeMappings`, `JSONObfuscator.PropertyConfigurer.excludeSequences` and `JSONObfuscator.all` have been removed. You need to use new method `withValueTypes` instead. For example:
+`YAMLObfuscator.PropertyConfigurer.scalarsOnly`, `YAMLObfuscator.PropertyConfigurer.excludeMappings`, `YAMLObfuscator.PropertyConfigurer.excludeSequences` and `YAMLObfuscator.all` have been removed. You need to use new method `withValueTypes` instead. For example:
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator)
                 .scalarsOnlyByDefault()
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, property -> property
                 .withValueTypes(ValueType.SCALAR))
 ```
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator)
                 .excludeMappings()
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, property -> property
                 .withValueTypes(ValueType.SCALAR, ValueType.SEQUENCE))
 ```
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator)
                 .excludeSequences()
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, property -> property
                 .withValueTypes(ValueType.SCALAR, ValueType.MAPPING))
 ```
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator)
                 .excludeMappings()
                 .excludeSequences()
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, property -> property
                 .withValueTypes(ValueType.SCALAR))
 ```
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator)
                .all()
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, property -> property
                 .withValueTypes(ValueType.ALL))
 ```
 
 ### includeMappings, includeSequences
 
-`JSONObfuscator.PropertyConfigurer.includeMappings` and `JSONObfuscator.PropertyConfigurer.includeSequences` have been removed. You need to combine methods `forMappings` and/or `forSequences` with new method `withValueTypes` instead. For example:
+`YAMLObfuscator.PropertyConfigurer.includeMappings` and `YAMLObfuscator.PropertyConfigurer.includeSequences` have been removed. You need to combine methods `forMappings` and/or `forSequences` with new method `withValueTypes` instead. For example:
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator)
                 .includeMappings())
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, property -> property
                 .withValueTypes(ValueType.SCALAR, ValueType.MAPPING)
                 // or .withValueTypes(ValueType.ALL) to also include sequences
@@ -221,11 +221,11 @@ JSONObfuscator.builder()
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator)
                 .includeSequences()
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, property -> property
                 .withValueTypes(ValueType.SCALAR, ValueType.SEQUENCE)
                 // or .withValueTypes(ValueType.ALL) to also include mappings
@@ -234,24 +234,24 @@ JSONObfuscator.builder()
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator)
                 .includeMappings())
                 .includeSequences()
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, property -> property
                 .withValueTypes(ValueType.ALL)
                 .forSequences(ObfuscationMode.OBFUSCATE))
 ```
 
-## LimitConfigurer
+## YAMLObfuscator.LimitConfigurer
 
-`JSONObfuscator.LimitConfigurer` is no longer an interface but instead a final class. If you are creating mocks or implementing it directly you need to use actual instances passed to the `Consumer` argument of `JSONObfuscator.Builder.limitTo`.
+`YAMLObfuscator.LimitConfigurer` is no longer an interface but instead a final class. If you are creating mocks or implementing it directly you need to use actual instances passed to the `Consumer` argument of `YAMLObfuscator.Builder.limitTo`.
 
-## ObfuscationMode
+## YAMLObfuscator.ObfuscationMode
 
-Class `ObfuscationMode` is no longer nested in `PropertyConfigurer` but directly in `JSONObfuscator`. You need to replace any occurrence of `JSONObfuscator.PropertyConfigurer.ObfuscationMode` to `JSONObfuscator.ObfuscationMode` in import statements, method arguments, etc.
+`ObfuscationMode` is no longer nested in `PropertyConfigurer` but directly in `YAMLObfuscator`. You need to replace any occurrence of `YAMLObfuscator.PropertyConfigurer.ObfuscationMode` to `YAMLObfuscator.ObfuscationMode` in import statements, method arguments, etc.
 
 ### EXCLUDE
 
@@ -259,62 +259,62 @@ Constant `ObfuscationMode.EXCLUDE` has been removed. You need to use new method 
 
 ```java
 /* old
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .forMappingsByDefault(ObfuscationMode.EXCLUDE)
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withValueTypesByDefault(ValueType.SCALAR, ValueType.SEQUENCE)
 ```
 
 ```java
 /* old
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .forSequencesByDefault(ObfuscationMode.EXCLUDE)
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withValueTypesByDefault(ValueType.SCALAR, ValueType.MAPPING)
 ```
 
 ```java
 /* old
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .forMappingsByDefault(ObfuscationMode.EXCLUDE)
         .forSequencesByDefault(ObfuscationMode.EXCLUDE)
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withValueTypesByDefault(ValueType.SCALAR)
 ```
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator)
                 .forMappings(ObfuscationMode.EXCLUDE)
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, property -> property
                 .withValueTypes(ValueType.SCALAR, ValueType.SEQUENCE))
 ```
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator)
                 .forSequences(ObfuscationMode.EXCLUDE)
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, property -> property
                 .withValueTypes(ValueType.SCALAR, ValueType.MAPPING))
 ```
 
 ```java
 /*
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator)
                 .forMappings(ObfuscationMode.EXCLUDE)
                 .forSequences(ObfuscationMode.EXCLUDE)
  */
-JSONObfuscator.builder()
+YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, property -> property
                 .withValueTypes(ValueType.SCALAR))
 ```
