@@ -418,8 +418,7 @@ public final class YAMLObfuscator extends Obfuscator {
          * Sets the limit for the obfuscated result.
          *
          * @param limit The limit to use.
-         * @return An object that can be used to configure the handling when the obfuscated result exceeds a pre-defined limit,
-         *         or continue building {@link YAMLObfuscator YAMLObfuscators}.
+         * @return This object.
          * @throws IllegalArgumentException If the given limit is negative.
          * @since 1.1
          */
