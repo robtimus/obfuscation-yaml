@@ -46,6 +46,8 @@ import com.github.robtimus.obfuscation.support.CaseSensitivity;
 import com.github.robtimus.obfuscation.support.CountingReader;
 import com.github.robtimus.obfuscation.support.LimitAppendable;
 import com.github.robtimus.obfuscation.support.MapBuilder;
+import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ObfuscationMode;
+import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ValueType;
 
 /**
  * An obfuscator that obfuscates YAML properties in {@link CharSequence CharSequences} or the contents of {@link Reader Readers}.
@@ -586,6 +588,66 @@ public final class YAMLObfuscator extends Obfuscator {
             forMappings = null;
             forSequences = null;
         }
+
+        /**
+         * The possible value types.
+         *
+         * @author Rob Spoor
+         * @since 2.0
+         */
+        public enum ValueType {
+            /**
+             * Represents scalar values.
+             */
+            SCALAR,
+            /**
+             * Represents mapping values.
+             */
+            MAPPING,
+            /**
+             * Represents sequence values.
+             */
+            SEQUENCE,
+            /**
+             * Represents all possible values.
+             * This is an alias for combining {@link #SCALAR}, {@link #MAPPING} and {@link #SEQUENCE}.
+             */
+            ALL,
+            ;
+
+            private static final Map<ValueType, Set<ValueType>> DE_ALIASED_TYPES = deAliasedTypes();
+
+            private static Map<ValueType, Set<ValueType>> deAliasedTypes() {
+                Map<ValueType, Set<ValueType>> result = new EnumMap<>(ValueType.class);
+                result.put(SCALAR, EnumSet.of(SCALAR));
+                result.put(MAPPING, EnumSet.of(MAPPING));
+                result.put(SEQUENCE, EnumSet.of(SEQUENCE));
+
+                result.put(ALL, EnumSet.of(SCALAR, MAPPING, SEQUENCE));
+
+                return result;
+            }
+        }
+
+        /**
+         * The possible ways to deal with nested mappings and sequences.
+         *
+         * @author Rob Spoor
+         * @since 1.3
+         */
+        public enum ObfuscationMode {
+            /** Obfuscate nested mappings and sequences completely. **/
+            OBFUSCATE,
+
+            /** Don't obfuscate nested mappings or sequences, but use the obfuscator for all nested scalar properties. **/
+            INHERIT,
+
+            /**
+             * Don't obfuscate nested mappings or sequences, but use the obfuscator for all nested scalar properties.
+             * If a nested property has its own obfuscator defined this will be used instead.
+             **/
+            INHERIT_OVERRIDABLE,
+        }
     }
 
     /**
@@ -617,65 +679,5 @@ public final class YAMLObfuscator extends Obfuscator {
         private void reset() {
             this.truncatedIndicator = null;
         }
-    }
-
-    /**
-     * The possible value types.
-     *
-     * @author Rob Spoor
-     * @since 2.0
-     */
-    public enum ValueType {
-        /**
-         * Represents scalar values.
-         */
-        SCALAR,
-        /**
-         * Represents mapping values.
-         */
-        MAPPING,
-        /**
-         * Represents sequence values.
-         */
-        SEQUENCE,
-        /**
-         * Represents all possible values.
-         * This is an alias for combining {@link #SCALAR}, {@link #MAPPING} and {@link #SEQUENCE}.
-         */
-        ALL,
-        ;
-
-        private static final Map<ValueType, Set<ValueType>> DE_ALIASED_TYPES = deAliasedTypes();
-
-        private static Map<ValueType, Set<ValueType>> deAliasedTypes() {
-            Map<ValueType, Set<ValueType>> result = new EnumMap<>(ValueType.class);
-            result.put(SCALAR, EnumSet.of(SCALAR));
-            result.put(MAPPING, EnumSet.of(MAPPING));
-            result.put(SEQUENCE, EnumSet.of(SEQUENCE));
-
-            result.put(ALL, EnumSet.of(SCALAR, MAPPING, SEQUENCE));
-
-            return result;
-        }
-    }
-
-    /**
-     * The possible ways to deal with nested mappings and sequences.
-     *
-     * @author Rob Spoor
-     * @since 1.3
-     */
-    public enum ObfuscationMode {
-        /** Obfuscate nested mappings and sequences completely. **/
-        OBFUSCATE,
-
-        /** Don't obfuscate nested mappings or sequences, but use the obfuscator for all nested scalar properties. **/
-        INHERIT,
-
-        /**
-         * Don't obfuscate nested mappings or sequences, but use the obfuscator for all nested scalar properties.
-         * If a nested property has its own obfuscator defined this will be used instead.
-         **/
-        INHERIT_OVERRIDABLE,
     }
 }

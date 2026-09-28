@@ -32,8 +32,8 @@ import org.snakeyaml.engine.v2.events.Event.ID;
 import org.snakeyaml.engine.v2.events.ScalarEvent;
 import org.snakeyaml.engine.v2.parser.Parser;
 import com.github.robtimus.obfuscation.Obfuscator;
-import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.ObfuscationMode;
-import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.ValueType;
+import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ObfuscationMode;
+import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ValueType;
 
 final class ObfuscatingParser implements Parser {
 
@@ -132,7 +132,7 @@ final class ObfuscatingParser implements Parser {
     }
 
     private void startMapping(Event event) {
-        startStructure(event, Event.ID.MappingStart, ValueType.MAPPING, p -> p.forMappings);
+        startStructure(event, Event.ID.MappingStart, ValueType.MAPPING, PropertyConfig::forMappings);
     }
 
     private void endMapping(Event event) {
@@ -140,7 +140,7 @@ final class ObfuscatingParser implements Parser {
     }
 
     private void startSequence(Event event) {
-        startStructure(event, Event.ID.SequenceStart, ValueType.SEQUENCE, p -> p.forSequences);
+        startStructure(event, Event.ID.SequenceStart, ValueType.SEQUENCE, PropertyConfig::forSequences);
     }
 
     private void endSequence(Event event) {
@@ -178,7 +178,7 @@ final class ObfuscatingParser implements Parser {
             currentProperty.depth--;
             if (currentProperty.depth == 0) {
                 if (currentProperty.obfuscateStructure()) {
-                    obfuscateUntilEvent(currentProperty.startEvent, event, currentProperty.config.obfuscator);
+                    obfuscateUntilEvent(currentProperty.startEvent, event, currentProperty.config.obfuscator());
                 }
                 // else the obfuscator is Obfuscator.none(), which means we don't need to obfuscate,
                 // or the structure itself should not be obfuscated
@@ -213,7 +213,7 @@ final class ObfuscatingParser implements Parser {
                 appendUntilEvent(event);
                 source.truncate();
             }
-        } else if (!currentProperty.config.performObfuscation && source.needsTruncating()) {
+        } else if (!currentProperty.config.performObfuscation() && source.needsTruncating()) {
             // in a nested object or array that's being obfuscated using Obfuscator.none(), which means we can just append data already
             appendUntilEvent(event);
             source.truncate();
@@ -226,7 +226,7 @@ final class ObfuscatingParser implements Parser {
         ObfuscatedProperty currentProperty = currentProperties.peekLast();
         if (currentProperty != null && currentProperty.obfuscateScalar()) {
             appendUntilEvent(event);
-            obfuscateEvent(event, currentProperty.config.obfuscator);
+            obfuscateEvent(event, currentProperty.config.obfuscator());
 
             if (currentProperty.depth == 0) {
                 currentProperties.removeLast();
@@ -350,14 +350,14 @@ final class ObfuscatingParser implements Parser {
 
         private boolean obfuscateStructure() {
             // Don't obfuscate the entire structure if Obfuscator.none() is used
-            return config.performObfuscation && obfuscationMode == ObfuscationMode.OBFUSCATE;
+            return config.performObfuscation() && obfuscationMode == ObfuscationMode.OBFUSCATE;
         }
 
         private boolean obfuscateScalar() {
             // Don't obfuscate the scalar if Obfuscator.none() is used
             // Obfuscate if depth == 0 (the property is for the scalar itself),
             // or if the obfuscation mode is INHERITED or INHERITED_OVERRIDABLE
-            return config.performObfuscation
+            return config.performObfuscation()
                     && (depth == 0 || obfuscationMode != ObfuscationMode.OBFUSCATE);
         }
     }

@@ -19,38 +19,22 @@ package com.github.robtimus.obfuscation.yaml;
 
 import java.util.Objects;
 import com.github.robtimus.obfuscation.Obfuscator;
-import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.ObfuscationMode;
+import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ObfuscationMode;
 
-final class PropertyConfig {
+record PropertyConfig(
+        Obfuscator obfuscator,
+        ObfuscationMode forMappings,
+        ObfuscationMode forSequences,
+        boolean performObfuscation
+) {
 
-    final Obfuscator obfuscator;
-    final ObfuscationMode forMappings;
-    final ObfuscationMode forSequences;
-    final boolean performObfuscation;
+    PropertyConfig {
+        Objects.requireNonNull(obfuscator);
+        Objects.requireNonNull(forMappings);
+        Objects.requireNonNull(forSequences);
+    }
 
     PropertyConfig(Obfuscator obfuscator, ObfuscationMode forMappings, ObfuscationMode forSequences) {
-        this.obfuscator = Objects.requireNonNull(obfuscator);
-        this.forMappings = Objects.requireNonNull(forMappings);
-        this.forSequences = Objects.requireNonNull(forSequences);
-        this.performObfuscation = !obfuscator.equals(Obfuscator.none());
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || o.getClass() != getClass()) {
-            return false;
-        }
-        PropertyConfig other = (PropertyConfig) o;
-        return obfuscator.equals(other.obfuscator)
-                && forMappings == other.forMappings
-                && forSequences == other.forSequences;
-    }
-
-    @Override
-    public int hashCode() {
-        return obfuscator.hashCode() ^ forMappings.hashCode() ^ forSequences.hashCode();
+        this(obfuscator, forMappings, forSequences, !obfuscator.equals(Obfuscator.none()));
     }
 }
