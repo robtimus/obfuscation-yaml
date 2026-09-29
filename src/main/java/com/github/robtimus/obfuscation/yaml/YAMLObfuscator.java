@@ -33,7 +33,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snakeyaml.engine.v2.api.LoadSettings;
@@ -45,7 +44,6 @@ import com.github.robtimus.obfuscation.support.CachingObfuscatingWriter;
 import com.github.robtimus.obfuscation.support.CaseSensitivity;
 import com.github.robtimus.obfuscation.support.CountingReader;
 import com.github.robtimus.obfuscation.support.LimitAppendable;
-import com.github.robtimus.obfuscation.support.MapBuilder;
 import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ObfuscationMode;
 import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ValueType;
 
@@ -58,7 +56,7 @@ public final class YAMLObfuscator extends Obfuscator {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(YAMLObfuscator.class);
 
-    final Map<ValueType, Map<String, PropertyConfig>> properties;
+    private final PropertyConfig.Lookup properties;
     private final String propertiesRepresentation;
 
     private final LoadSettings settings;
@@ -69,7 +67,7 @@ public final class YAMLObfuscator extends Obfuscator {
     private final String truncatedIndicator;
 
     private YAMLObfuscator(Builder builder) {
-        properties = builder.properties();
+        properties = builder.properties.build();
         propertiesRepresentation = builder.propertiesRepresentation();
 
         settings = LoadSettings.builder()
@@ -194,7 +192,7 @@ public final class YAMLObfuscator extends Obfuscator {
      */
     public static final class Builder {
 
-        private final Map<ValueType, MapBuilder<PropertyConfig>> properties;
+        private final PropertyConfig.Lookup.Builder properties;
         private final StringBuilder propertiesRepresentation;
 
         private CaseSensitivity defaultCaseSensitivity;
@@ -214,7 +212,7 @@ public final class YAMLObfuscator extends Obfuscator {
         private final LimitConfigurer limitConfigurer;
 
         private Builder() {
-            properties = new EnumMap<>(ValueType.class);
+            properties = PropertyConfig.Lookup.builder();
             propertiesRepresentation = new StringBuilder().append('{');
 
             defaultCaseSensitivity = CaseSensitivity.CASE_SENSITIVE;
@@ -289,8 +287,7 @@ public final class YAMLObfuscator extends Obfuscator {
                 propertyConfigurer.valueTypes.stream()
                         .flatMap(valueType -> ValueType.DE_ALIASED_TYPES.get(valueType).stream())
                         .distinct()
-                        .forEach(valueType -> properties.computeIfAbsent(valueType, k -> new MapBuilder<>())
-                                .withEntry(property, propertyConfig, propertyConfigurer.caseSensitivity));
+                        .forEach(valueType -> properties.add(property, valueType, propertyConfigurer.caseSensitivity, propertyConfig));
 
                 addPropertyRepresenation(property, obfuscator);
             } finally {
@@ -472,17 +469,6 @@ public final class YAMLObfuscator extends Obfuscator {
          */
         public <R> R transform(Function<? super Builder, ? extends R> f) {
             return f.apply(this);
-        }
-
-        private Map<ValueType, Map<String, PropertyConfig>> properties() {
-            return properties.entrySet()
-                    .stream()
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            e -> e.getValue().build(),
-                            // This will never be called because entries have unique keys
-                            (t1, t2) -> null,
-                            () -> new EnumMap<>(ValueType.class)));
         }
 
         private String propertiesRepresentation() {

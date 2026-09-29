@@ -20,9 +20,7 @@ package com.github.robtimus.obfuscation.yaml;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayDeque;
-import java.util.Collections;
 import java.util.Deque;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import org.snakeyaml.engine.v2.common.Anchor;
@@ -41,7 +39,7 @@ final class ObfuscatingParser implements Parser {
     private final Source source;
     private final Appendable destination;
 
-    private final Map<ValueType, Map<String, PropertyConfig>> properties;
+    private final PropertyConfig.Lookup properties;
 
     private final int textOffset;
     private final int textEnd;
@@ -60,9 +58,7 @@ final class ObfuscatingParser implements Parser {
     private final Deque<Event.ID> structureStack = new ArrayDeque<>();
     private String currentFieldName;
 
-    ObfuscatingParser(Parser parser, Source source, int start, int end, Appendable destination,
-                      Map<ValueType, Map<String, PropertyConfig>> properties) {
-
+    ObfuscatingParser(Parser parser, Source source, int start, int end, Appendable destination, PropertyConfig.Lookup properties) {
         this.delegate = parser;
         this.source = source;
         this.textOffset = start;
@@ -237,7 +233,7 @@ final class ObfuscatingParser implements Parser {
 
     private void lookupConfigIfNeeded(ValueType valueType) {
         if (needsObfuscatorLookup) {
-            PropertyConfig config = properties.getOrDefault(valueType, Collections.emptyMap()).get(currentFieldName);
+            PropertyConfig config = properties.find(currentFieldName, valueType);
             if (config != null) {
                 ObfuscatedProperty currentProperty = new ObfuscatedProperty(config);
                 currentProperties.addLast(currentProperty);
