@@ -336,7 +336,7 @@ public final class YAMLObfuscator extends Obfuscator {
         }
 
         /**
-         * Sets several value types for which property should be obfuscated by default.
+         * Sets several value types for which properties should be obfuscated by default.
          * <p>
          * Note that this will not change what will be obfuscated for any property that was already added.
          *

@@ -34,9 +34,9 @@ YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, PropertyConfigurer::caseInsensitive)
 ```
 
-### scalarsOnlyByDefault, excludeMappingsByDefault, excludeSequencesByDefault, all
+### scalarsOnlyByDefault, excludeMappingsByDefault, excludeSequencesByDefault, allByDefault
 
-`YAMLObfuscator.scalarsOnlyByDefault`, `YAMLObfuscator.excludeMappingsByDefault`, `YAMLObfuscator.excludeSequencesByDefault` and `YAMLObfuscator.allByDefault` have been removed. You need to use new method `withValueTypesByDefault` instead. For example:
+`YAMLObfuscator.Builder.scalarsOnlyByDefault`, `YAMLObfuscator.Builder.excludeMappingsByDefault`, `YAMLObfuscator.Builder.excludeSequencesByDefault` and `YAMLObfuscator.Builder.allByDefault` have been removed. You need to use new method `withValueTypesByDefault` instead. For example:
 
 ```java
 /*
@@ -86,7 +86,7 @@ YAMLObfuscator.builder()
 
 ### includeMappingsByDefault, includeSequencesByDefault
 
-`YAMLObfuscator.includeMappingsByDefault` and `YAMLObfuscator.includeSequencesByDefault` have been removed. You need to combine methods `forMappingsByDefault` and/or `forSequencesByDefault` with new method `withValueTypesByDefault` instead. For example:
+`YAMLObfuscator.Builder.includeMappingsByDefault` and `YAMLObfuscator.Builder.includeSequencesByDefault` have been removed. You need to combine methods `forMappingsByDefault` and/or `forSequencesByDefault` with new method `withValueTypesByDefault` instead. For example:
 
 ```java
 /*
@@ -144,7 +144,7 @@ YAMLObfuscator.builder()
 
 ### scalarsOnly, excludeMappings, excludeSequences, all
 
-`YAMLObfuscator.PropertyConfigurer.scalarsOnly`, `YAMLObfuscator.PropertyConfigurer.excludeMappings`, `YAMLObfuscator.PropertyConfigurer.excludeSequences` and `YAMLObfuscator.all` have been removed. You need to use new method `withValueTypes` instead. For example:
+`YAMLObfuscator.PropertyConfigurer.scalarsOnly`, `YAMLObfuscator.PropertyConfigurer.excludeMappings`, `YAMLObfuscator.PropertyConfigurer.excludeSequences` and `YAMLObfuscator.PropertyConfigurer.all` have been removed. You need to use new method `withValueTypes` instead. For example:
 
 ```java
 /*
@@ -249,11 +249,11 @@ YAMLObfuscator.builder()
 
 `YAMLObfuscator.LimitConfigurer` is no longer an interface but instead a final class. If you are creating mocks or implementing it directly you need to use actual instances passed to the `Consumer` argument of `YAMLObfuscator.Builder.limitTo`.
 
-## YAMLObfuscator.ObfuscationMode
+## YAMLObfuscator.PropertyConfigurer.ObfuscationMode
 
 ### EXCLUDE
 
-Constant `ObfuscationMode.EXCLUDE` has been removed. You need to use new method `withValueTypesByDefault` and/or `withValueTypes` as documented above instead. For example:
+Constant `ObfuscationMode.PropertyConfigurer.EXCLUDE` has been removed. You need to use new method `withValueTypesByDefault` and/or `withValueTypes` as documented above instead. For example:
 
 ```java
 /* old
