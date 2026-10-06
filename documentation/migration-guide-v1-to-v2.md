@@ -6,7 +6,7 @@
 
 ### withProperty
 
-`YAMLObfuscator.Builder.withProperty` no longer returns a `PropertyConfigurer`. Instead it is overloaded to take a `Consumer<PropertyConfigurer>`. If you called any `PropertyConfigurer` methods you need to provide a lambda instead. For example:
+`YAMLObfuscator.Builder.withProperty` no longer returns a `PropertyConfigurer`. Instead it is overloaded to take a `Consumer<PropertyNameConfigurer>`. If you called any `PropertyConfigurer` methods you need to provide a lambda instead. For example:
 
 ```java
 /* old:
@@ -23,7 +23,7 @@ YAMLObfuscator.builder()
 
 #### Case sensitivity
 
-`YAMLObfuscator.Builder.withProperty` no longer accepts a `CaseSensitivity` argument. You need to use new `PropertyConfigurer` methods `caseSensitive()` and `caseInsensitive()` instead. For example:
+`YAMLObfuscator.Builder.withProperty` no longer accepts a `CaseSensitivity` argument. You need to use methods `caseSensitive()` and `caseInsensitive()` of new class `PropertyNameConfigurer` instead. For example:
 
 ```java
 /* old:
@@ -31,7 +31,7 @@ YAMLObfuscator.builder()
         .withProperty("foo", obfuscator, CaseSensitivity.CASE_INSENSITIVE)
  */
 YAMLObfuscator.builder()
-        .withProperty("foo", obfuscator, PropertyConfigurer::caseInsensitive)
+        .withProperty("foo", obfuscator, PropertyNameConfigurer::caseInsensitive)
 ```
 
 ### scalarsOnlyByDefault, excludeMappingsByDefault, excludeSequencesByDefault, allByDefault
@@ -140,7 +140,7 @@ YAMLObfuscator.builder()
 
 ## YAMLObfuscator.PropertyConfigurer
 
-`YAMLObfuscator.PropertyConfigurer` is no longer an interface but instead a final class. If you are creating mocks or implementing it directly you need to use actual instances passed to the `Consumer` argument of `YAMLObfuscator.Builder.withProperty`.
+`YAMLObfuscator.PropertyConfigurer` is no longer an interface but instead an abstract sealed class with subclasses `YAMLObfuscator.PropertyNameConfigurer` and `YAMLObfuscator.PropertyPathConfigurer`. If you are creating mocks or implementing it directly you need to use actual instances passed to the `Consumer` argument of `YAMLObfuscator.Builder.withProperty` or `YAMLObfuscator.Builder.withPropertyPath`.
 
 ### scalarsOnly, excludeMappings, excludeSequences, all
 

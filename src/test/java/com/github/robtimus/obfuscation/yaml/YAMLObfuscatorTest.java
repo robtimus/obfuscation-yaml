@@ -26,6 +26,7 @@ import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,6 +45,7 @@ import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -66,9 +68,10 @@ import com.github.robtimus.junit.support.extension.testlogger.Reload4jLoggerCont
 import com.github.robtimus.junit.support.extension.testlogger.TestLogger;
 import com.github.robtimus.obfuscation.Obfuscator;
 import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.Builder;
-import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer;
 import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ObfuscationMode;
 import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ValueType;
+import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyNameConfigurer;
+import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyPath;
 
 @SuppressWarnings("nls")
 @TestInstance(Lifecycle.PER_CLASS)
@@ -90,7 +93,8 @@ class YAMLObfuscatorTest {
                 arguments(obfuscator, createObfuscator(builder().withProperty("test", none(), p -> p.caseSensitive())), true),
                 arguments(obfuscator, createObfuscator(builder().withProperty("test", fixedLength(3))), false),
                 arguments(obfuscator,
-                        createObfuscator(builder().withProperty("test", none()).withProperty("test", none(), PropertyConfigurer::caseInsensitive)),
+                        createObfuscator(
+                                builder().withProperty("test", none()).withProperty("test", none(), PropertyNameConfigurer::caseInsensitive)),
                         false),
                 arguments(obfuscator, createObfuscator(builder().withProperty("test", none(), p -> p.withValueTypes(ValueType.SCALAR))), false),
                 arguments(obfuscator, createObfuscator(builder().withProperty("test", none(), p -> p.forMappings(ObfuscationMode.INHERIT))), false),
@@ -138,6 +142,53 @@ class YAMLObfuscatorTest {
                         .withValueTypesByDefault(ValueType.ALL)
                         .withProperty("property", obfuscator, property -> property.withValueTypes(ValueType.SCALAR));
                 assertThrows(IllegalArgumentException.class, () -> builder.withProperty("property", obfuscator));
+            }
+        }
+
+        @Nested
+        @DisplayName("withPropertyPath")
+        class WithPropertyPath {
+
+            @Test
+            @DisplayName("duplicate matcher with exact match")
+            void testDuplicateMatcherWithExactMatch() {
+                Obfuscator obfuscator = Obfuscator.all();
+                Builder builder = builder().withPropertyPath(PropertyPath.startsWith("foo"), obfuscator);
+                PropertyPath.Matcher matcher = PropertyPath.startsWith("foo");
+                assertThrows(IllegalArgumentException.class, () -> builder.withPropertyPath(matcher, obfuscator));
+            }
+
+            @Test
+            @DisplayName("duplicate matcher with some overlap")
+            void testDuplicatePropertyWithSomeOverlap() {
+                Obfuscator obfuscator = Obfuscator.all();
+                Builder builder = builder()
+                        .withValueTypesByDefault(ValueType.ALL)
+                        .withPropertyPath(PropertyPath.startsWith("foo"), obfuscator, property -> property.withValueTypes(ValueType.SCALAR));
+                PropertyPath.Matcher matcher = PropertyPath.startsWith("foo");
+                assertThrows(IllegalArgumentException.class, () -> builder.withPropertyPath(matcher, obfuscator));
+            }
+
+            @Test
+            @DisplayName("no duplicate with lambdas")
+            void testNoDuplicateWithLambdas() {
+                Obfuscator obfuscator = Obfuscator.all();
+                Builder builder = builder().withPropertyPath(p -> p.lastProperty().equals("foo"), obfuscator);
+                PropertyPath.Matcher matcher = p -> p.lastProperty().equals("foo");
+                assertDoesNotThrow(() -> builder.withPropertyPath(matcher, obfuscator));
+            }
+
+            @Test
+            @DisplayName("duplicate matcher with shared lambda")
+            void testDuplicateMatcherWithSharedLambda() {
+                Obfuscator obfuscator = Obfuscator.all();
+                Builder builder = builder().withPropertyPath(matches(), obfuscator);
+                PropertyPath.Matcher matcher = matches();
+                assertThrows(IllegalArgumentException.class, () -> builder.withPropertyPath(matcher, obfuscator));
+            }
+
+            private PropertyPath.Matcher matches() {
+                return p -> p.lastProperty().equals("foo");
             }
         }
 
@@ -200,7 +251,7 @@ class YAMLObfuscatorTest {
 
             ObfuscatingCaseSensitivelyOverridden() {
                 super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.all",
-                        () -> createObfuscatorCaseInsensitive(builder().caseSensitiveByDefault(), PropertyConfigurer::caseInsensitive));
+                        () -> createObfuscatorCaseInsensitive(builder().caseSensitiveByDefault(), PropertyNameConfigurer::caseInsensitive));
             }
         }
 
@@ -294,6 +345,17 @@ class YAMLObfuscatorTest {
                     super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.limited.without-indicator",
                             () -> createObfuscator(builder().limitTo(413, limit -> limit.withTruncatedIndicator(null))));
                 }
+            }
+        }
+
+        @Nested
+        @DisplayName("paths and name matching")
+        @TestInstance(Lifecycle.PER_CLASS)
+        class PathAndNameMatching extends ObfuscatorTest {
+
+            PathAndNameMatching() {
+                super("YAMLObfuscator.input.valid.yaml", "YAMLObfuscator.expected.valid.path-and-name-matching",
+                        () -> createObfuscatorWithPathsAndNames(builder()));
             }
         }
     }
@@ -582,6 +644,126 @@ class YAMLObfuscatorTest {
         }
     }
 
+    @Test
+    @DisplayName("PropertyPath structure")
+    void testPropertyPathStructure() {
+        String input = readResource("YAMLObfuscator.input.valid.yaml");
+
+        List<List<String>> capturedPaths = new ArrayList<>();
+        PropertyPath.Matcher capturingMatcher = p -> {
+            // Need to create a copy
+            capturedPaths.add(List.copyOf(p.properties()));
+            return false;
+        };
+
+        YAMLObfuscator.builder()
+                .withPropertyPath(capturingMatcher, Obfuscator.none())
+                .build()
+                .obfuscateText(input);
+
+        List<List<String>> expected = List.of(
+                List.of("string"),
+                List.of("int"),
+                List.of("float"),
+                List.of("boolean"),
+                List.of("null"),
+                List.of("mapping"),
+                List.of("mapping", "string"),
+                List.of("mapping", "int"),
+                List.of("mapping", "float"),
+                List.of("mapping", "boolean"),
+                List.of("mapping", "null"),
+                List.of("mapping", "nested"),
+                List.of("mapping", "nested", "prop1"),
+                List.of("mapping", "nested", "prop2"),
+                List.of("flowMapping"),
+                List.of("flowMapping", "string"),
+                List.of("flowMapping", "int"),
+                List.of("flowMapping", "float"),
+                List.of("flowMapping", "boolean"),
+                List.of("flowMapping", "null"),
+                List.of("flowMapping", "nested"),
+                List.of("flowMapping", "nested", "prop1"),
+                List.of("flowMapping", "nested", "prop2"),
+                List.of("sequence"),
+                List.of("flowSequence"),
+                List.of("notMatchedString"),
+                List.of("notMatchedInt"),
+                List.of("notMatchedFloat"),
+                List.of("notMatchedBoolean"),
+                List.of("nonMatchedNull"),
+                List.of("nonMatchedMapping"),
+                List.of("nonMatchedMapping", "notMatchedString"),
+                List.of("nonMatchedMapping", "notMatchedInt"),
+                List.of("nonMatchedMapping", "notMatchedFloat"),
+                List.of("nonMatchedMapping", "notMatchedBoolean"),
+                List.of("nonMatchedMapping", "nonMatchedNull"),
+                List.of("nested"),
+                List.of("nested", "string"),
+                List.of("nested", "int"),
+                List.of("nested", "float"),
+                List.of("nested", "boolean"),
+                List.of("nested", "null"),
+                List.of("nested", "mapping"),
+                List.of("nested", "mapping", "string"),
+                List.of("nested", "mapping", "int"),
+                List.of("nested", "mapping", "float"),
+                List.of("nested", "mapping", "boolean"),
+                List.of("nested", "mapping", "nested"),
+                List.of("nested", "mapping", "nested", "prop1"),
+                List.of("nested", "mapping", "nested", "prop2"),
+                List.of("nested", "flowMapping"),
+                List.of("nested", "flowMapping", "string"),
+                List.of("nested", "flowMapping", "int"),
+                List.of("nested", "flowMapping", "float"),
+                List.of("nested", "flowMapping", "boolean"),
+                List.of("nested", "flowMapping", "null"),
+                List.of("nested", "flowMapping", "nested"),
+                List.of("nested", "flowMapping", "nested", "prop1"),
+                List.of("nested", "flowMapping", "nested", "prop2"),
+                List.of("nested", "sequence"),
+                List.of("nested", "flowSequence"),
+                List.of("nested", "notMatchedString"),
+                List.of("nested", "notMatchedInt"),
+                List.of("nested", "notMatchedFloat"),
+                List.of("nested", "notMatchedBoolean"),
+                List.of("nested", "nonMatchedNull"),
+                List.of("notObfuscated"),
+                List.of("notObfuscated", "string"),
+                List.of("notObfuscated", "int"),
+                List.of("notObfuscated", "float"),
+                List.of("notObfuscated", "boolean"),
+                List.of("notObfuscated", "null"),
+                List.of("notObfuscated", "mapping"),
+                List.of("notObfuscated", "mapping", "string"),
+                List.of("notObfuscated", "mapping", "int"),
+                List.of("notObfuscated", "mapping", "float"),
+                List.of("notObfuscated", "mapping", "boolean"),
+                List.of("notObfuscated", "mapping", "nested"),
+                List.of("notObfuscated", "mapping", "nested", "prop1"),
+                List.of("notObfuscated", "mapping", "nested", "prop2"),
+                List.of("notObfuscated", "flowMapping"),
+                List.of("notObfuscated", "flowMapping", "string"),
+                List.of("notObfuscated", "flowMapping", "int"),
+                List.of("notObfuscated", "flowMapping", "float"),
+                List.of("notObfuscated", "flowMapping", "boolean"),
+                List.of("notObfuscated", "flowMapping", "null"),
+                List.of("notObfuscated", "flowMapping", "nested"),
+                List.of("notObfuscated", "flowMapping", "nested", "prop1"),
+                List.of("notObfuscated", "flowMapping", "nested", "prop2"),
+                List.of("notObfuscated", "sequence"),
+                List.of("notObfuscated", "flowSequence"),
+                List.of("notObfuscated", "notMatchedString"),
+                List.of("notObfuscated", "notMatchedInt"),
+                List.of("notObfuscated", "notMatchedFloat"),
+                List.of("notObfuscated", "notMatchedBoolean"),
+                List.of("notObfuscated", "nonMatchedNull"),
+                List.of("anchor")
+        );
+
+        assertEquals(expected, capturedPaths);
+    }
+
     private static Obfuscator createObfuscator() {
         return builder()
                 .transform(YAMLObfuscatorTest::createObfuscator);
@@ -618,7 +800,7 @@ class YAMLObfuscatorTest {
         return createObfuscatorCaseInsensitive(builder, property -> { /* do nothing */ });
     }
 
-    private static Obfuscator createObfuscatorCaseInsensitive(Builder builder, Consumer<PropertyConfigurer> configurer) {
+    private static Obfuscator createObfuscatorCaseInsensitive(Builder builder, Consumer<PropertyNameConfigurer> configurer) {
         Obfuscator obfuscator = fixedLength(3);
         return builder
                 .withProperty("STRING", obfuscator, configurer)
@@ -692,6 +874,16 @@ class YAMLObfuscatorTest {
                 .withProperty("anchor", obfuscator)
                 .withProperty("alias", obfuscator)
                 .withProperty("notObfuscated", none())
+                .withMaxDocumentSize(10 * DEFAULT_PREFERRED_MAX_BUFFER_SIZE)
+                .build();
+    }
+
+    private static Obfuscator createObfuscatorWithPathsAndNames(Builder builder) {
+        return builder
+                .withProperty("null", Obfuscator.fixedValue("<NULL>"))
+                .withPropertyPath(PropertyPath.startsWith("object", "nested"), Obfuscator.fixedValue("<nested>"), property -> property
+                        .forSequences(ObfuscationMode.INHERIT))
+                .withPropertyPath(PropertyPath.containsAt(-2, "nested"), Obfuscator.fixedValue("<in-nested>"))
                 .withMaxDocumentSize(10 * DEFAULT_PREFERRED_MAX_BUFFER_SIZE)
                 .build();
     }

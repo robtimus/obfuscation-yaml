@@ -1,0 +1,78 @@
+string: "string\"int"
+int: 123456
+float: 1234.56
+boolean: true
+null: <NULL>
+mapping:
+  string: 'string"int'
+  int: 123456
+  float: 1234.56
+  boolean: true
+  null: <NULL>
+  nested:
+    - prop1: "<in-nested>"
+      prop2: "<in-nested>"
+flowMapping: { string: "string\"int", int: 123456, float: 1234.56, boolean: true, null: <NULL>, nested: { prop1: "<in-nested>", prop2: "<in-nested>" } }
+sequence:
+  -
+    - "1"
+    - "2"
+  - {}
+flowSequence: [ [ "1", "2" ], {} ]
+notMatchedString: "123456"
+notMatchedInt: 123456
+notMatchedFloat: 1234.56
+notMatchedBoolean: true
+nonMatchedNull: null
+nonMatchedMapping:
+  notMatchedString: "123456"
+  notMatchedInt: 123456
+  notMatchedFloat: 1234.56
+  notMatchedBoolean: true
+  nonMatchedNull: null
+nested:
+  - string: "<in-nested>"
+    int: <in-nested>
+    float: <in-nested>
+    boolean: <in-nested>
+    null: <in-nested>
+    mapping:
+      <in-nested>
+    flowMapping: <in-nested>
+    sequence:
+      <in-nested>
+    flowSequence: <in-nested>
+    notMatchedString: "<in-nested>"
+    notMatchedInt: <in-nested>
+    notMatchedFloat: <in-nested>
+    notMatchedBoolean: <in-nested>
+    nonMatchedNull: <in-nested>
+notObfuscated:
+  string: "string\"int"
+  int: 123456
+  float: 1234.56
+  boolean: true
+  null: <NULL>
+  mapping:
+    - string: "string\"int"
+      int: 123456
+      float: 1234.56
+      boolean: true
+      nested:
+        - prop1: "<in-nested>"
+          prop2: "<in-nested>"
+          # comment
+  flowMapping: { string: "string\"int", int: 123456, float: 1234.56, boolean: true, null: <NULL>, nested: { prop1: "<in-nested>", prop2: "<in-nested>" } }
+  sequence:
+    -
+      - "1"
+      - "2"
+    - {}
+  flowSequence: [ [ "1", "2" ], {} ]
+  notMatchedString: "123456"
+  notMatchedInt: 123456
+  notMatchedFloat: 1234.56
+  notMatchedBoolean: true
+  nonMatchedNull: null
+anchor: &A "this is an anchor" # comment
+alias: *A # comment

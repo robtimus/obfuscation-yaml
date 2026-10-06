@@ -32,6 +32,7 @@ import org.snakeyaml.engine.v2.parser.Parser;
 import com.github.robtimus.obfuscation.Obfuscator;
 import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ObfuscationMode;
 import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyConfigurer.ValueType;
+import com.github.robtimus.obfuscation.yaml.YAMLObfuscator.PropertyPath;
 
 final class ObfuscatingParser implements Parser {
 
@@ -52,6 +53,7 @@ final class ObfuscatingParser implements Parser {
      */
     private boolean needsObfuscatorLookup;
 
+    private final PropertyPath propertyPath = new PropertyPath();
     private final Deque<ObfuscatedProperty> currentProperties = new ArrayDeque<>();
     // SnakeYAML reports field names as Scalar events. The only difference with actual values is the current state.
     // We need to keep track of this state, more specifically whether or not the current structure is a mapping or no, and the current field name.
@@ -168,7 +170,6 @@ final class ObfuscatingParser implements Parser {
     }
 
     private void endStructure(Event event, Event.ID startEventId) {
-        endStructure();
         ObfuscatedProperty currentProperty = currentProperties.peekLast();
         if (currentProperty != null && currentProperty.hasStartEventId(startEventId)) {
             currentProperty.depth--;
@@ -184,6 +185,9 @@ final class ObfuscatingParser implements Parser {
             // else still in a nested structure that's being obfuscated
         }
         // else currently no structure is being obfuscated
+
+        popFromPropertyPath();
+        endStructure();
     }
 
     private void alias() {
@@ -192,8 +196,9 @@ final class ObfuscatingParser implements Parser {
 
     private void scalar(Event event) {
         if (structureStack.peekLast() == Event.ID.MappingStart && currentFieldName == null) {
-            // directly inside a sequence, and there is no current field name, so this must be it
+            // directly inside a mapping, and there is no current field name, so this must be it
             currentFieldName = ((ScalarEvent) event).getValue();
+            pushToPropertyPath(currentFieldName);
             fieldName(event);
         } else {
             scalarValue(event);
@@ -229,16 +234,28 @@ final class ObfuscatingParser implements Parser {
             }
         }
         // else not obfuscating, or in a nested mapping or or sequence that's being obfuscated; do nothing
+
+        popFromPropertyPath();
     }
 
     private void lookupConfigIfNeeded(ValueType valueType) {
         if (needsObfuscatorLookup) {
-            PropertyConfig config = properties.find(currentFieldName, valueType);
+            PropertyConfig config = properties.find(propertyPath, valueType);
             if (config != null) {
                 ObfuscatedProperty currentProperty = new ObfuscatedProperty(config);
                 currentProperties.addLast(currentProperty);
             }
             needsObfuscatorLookup = false;
+        }
+    }
+
+    private void pushToPropertyPath(String propertyName) {
+        propertyPath.push(propertyName);
+    }
+
+    private void popFromPropertyPath() {
+        if (structureStack.peekLast() == Event.ID.MappingStart) {
+            propertyPath.pop();
         }
     }
 
